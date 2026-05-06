@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect, useRef } from "react"
-import { Menu, X, ArrowRight, Heart, BookOpen } from "lucide-react"
+import { Menu, X, ArrowRight, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase"
@@ -75,7 +75,13 @@ export function Navbar() {
                 href="/library"
                 className="relative px-4 py-2 text-sm font-medium text-[#0F0F0F]/70 transition-all duration-300 hover:text-[#0F0F0F] group flex items-center gap-1.5"
               >
-                <BookOpen className="h-4 w-4" />
+                <Image
+                  src="/icon_bibliotheque.png"
+                  alt="Icône bibliothèque"
+                  width={16}
+                  height={16}
+                  className="h-4 w-4"
+                />
                 Bibliothèque
                 <span className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-[#F2B33D] transition-all duration-300 group-hover:left-4 group-hover:w-[calc(100%-32px)]" />
               </Link>
@@ -132,12 +138,6 @@ export function Navbar() {
               <Button variant="outline" asChild className="font-semibold border-[#F2B33D] text-[#F2B33D] hover:bg-[#F2B33D]/10">
                 <Link href="/register">Inscription</Link>
               </Button>
-              <Button asChild className="group font-semibold shadow-lg shadow-[#F2B33D]/25 transition-all duration-300 hover:shadow-xl hover:shadow-[#F2B33D]/30 hover:scale-105 bg-[#F2B33D] hover:bg-[#F2B33D]/90">
-                <Link href="/pricing">
-                  Voir les plans
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
             </>
           )}
         </div>
@@ -163,7 +163,13 @@ export function Navbar() {
                   className="rounded-xl px-4 py-3 text-sm font-medium text-[#0F0F0F]/70 transition-all duration-300 hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] hover:translate-x-1 flex items-center gap-2"
                   onClick={() => setIsOpen(false)}
                 >
-                  <BookOpen className="h-4 w-4" />
+                  <Image
+                    src="/icon_bibliotheque.png"
+                    alt="Icône bibliothèque"
+                    width={16}
+                    height={16}
+                    className="h-4 w-4"
+                  />
                   Bibliothèque
                 </Link>
                 <Link
@@ -225,12 +231,6 @@ export function Navbar() {
                 >
                   Inscription
                 </Link>
-                <Button asChild className="mt-3 h-12 font-semibold shadow-lg shadow-[#F2B33D]/25 bg-[#F2B33D] hover:bg-[#F2B33D]/90">
-                  <Link href="/pricing" onClick={() => setIsOpen(false)}>
-                    Voir les plans
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
               </>
             )}
           </nav>

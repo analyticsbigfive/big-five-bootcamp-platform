@@ -7,8 +7,9 @@ export const metadata: Metadata = {
   title: 'Laveiye - La référence créative',
   description: 'Benchmarkez, analysez et créez des concepts gagnants en quelques minutes.',
   icons: {
-    icon: '/icon.png',
-    apple: '/icon.png',
+    icon: '/favicon_onglet.png',
+    shortcut: '/favicon_onglet.png',
+    apple: '/favicon_onglet.png',
   },
 }
 

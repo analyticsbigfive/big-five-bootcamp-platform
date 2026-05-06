@@ -119,8 +119,15 @@ export function DashboardNavbar({
           <nav className="hidden items-center gap-1 md:flex">
             <Link
               href="/dashboard"
-              className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]/50"
+              className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]/50 flex items-center gap-1"
             >
+              <Image
+                src="/icon_bibliotheque.png"
+                alt="Icône bibliothèque"
+                width={14}
+                height={14}
+                className="h-3.5 w-3.5"
+              />
               Bibliothèque
             </Link>
             <Link
@@ -201,17 +208,17 @@ export function DashboardNavbar({
               {effectiveMonthlyClicks}/{monthlyClickLimit || 3} aujourd'hui
             </div>
           )}
-          {/* Compteur d'usage mensuel (Pro/Agency payant) */}
+          {/* Compteur d'usage du jour (Pro/Agency payant) */}
           {!effectiveIsFreeUser && isPremium && effectiveMonthlyExplored > 0 && (
             <div className="hidden md:flex items-center gap-1.5 rounded-full px-3 h-8 bg-[#10B981]/10 text-[#10B981] text-xs font-semibold">
               <Sparkles className="h-3.5 w-3.5" />
-              {effectiveMonthlyExplored} explorée{effectiveMonthlyExplored > 1 ? 's' : ''} ce mois
+              {effectiveMonthlyExplored} explorée{effectiveMonthlyExplored > 1 ? 's' : ''} ce jour
             </div>
           )}
           {!effectiveIsFreeUser && isPremium && effectiveMonthlyExplored === 0 && (
             <div className="hidden md:flex items-center gap-1.5 rounded-full px-3 h-8 bg-[#10B981]/10 text-[#10B981] text-xs font-semibold">
               <Sparkles className="h-3.5 w-3.5" />
-              0 explorée ce mois
+              0 explorée ce jour
             </div>
           )}
           {/* Bouton d'abonnement : durée restante ou incitatif */}
@@ -248,14 +255,14 @@ export function DashboardNavbar({
               </Button>
             </Link>
           ) : (
-            /* Pas de plan payant → bouton "Voir les plans" */
+            /* Pas de plan payant → bouton Tarifs */
             <Link href="/pricing" className="hidden md:flex">
               <Button
                 size="sm"
                 className="gap-1.5 text-xs font-semibold rounded-full px-3 h-8 bg-[#F2B33D] text-black hover:bg-[#F2B33D]/90"
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                Voir les plans
+                Tarifs
               </Button>
             </Link>
           )}
@@ -363,9 +370,16 @@ export function DashboardNavbar({
           <nav className="flex flex-col gap-1 px-4 pb-4">
             <Link
               href="/dashboard"
-              className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]/50"
+              className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]/50 flex items-center gap-1.5"
               onClick={() => setIsOpen(false)}
             >
+              <Image
+                src="/icon_bibliotheque.png"
+                alt="Icône bibliothèque"
+                width={16}
+                height={16}
+                className="h-4 w-4"
+              />
               Bibliothèque
             </Link>
             <Link
@@ -433,7 +447,7 @@ export function DashboardNavbar({
               ) : (
                 <span className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
-                  Voir les plans
+                  Tarifs
                 </span>
               )}
             </Link>

@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Filter, Grid3X3, LayoutList, ChevronLeft, ChevronRight, CalendarDays, TrendingUp, ChevronRight as ArrowRight, Sparkles } from "lucide-react"
 import { format, parseISO, startOfWeek, subDays } from "date-fns"
 import { fr } from "date-fns/locale"
-import { isPaidPlan } from "@/lib/pricing"
+import { isPaidPlan, canAccessPremiumContent } from "@/lib/pricing"
 import { fixBrokenEncoding } from "@/lib/utils"
 
 const ParticlesBackground = dynamic(() => import("@/components/ui/particles-background").then(m => m.ParticlesBackground), { ssr: false })
@@ -108,6 +108,12 @@ function PaginationBar({ currentPage, totalPages, onPageChange }: { currentPage:
   const showEllipsis = totalPages > 5
   const firstPages = [1, 2].filter(p => p <= totalPages)
   const lastPages = [totalPages - 1, totalPages].filter(p => p > 2)
+  const isCurrentPageVisible = firstPages.includes(currentPage) || lastPages.includes(currentPage)
+
+  const handlePageInputOpen = () => {
+    setPageInput(String(currentPage))
+    setIsEditingPage(true)
+  }
 
   return (
     <div className="mt-10 flex items-center justify-center gap-2">
@@ -150,10 +156,16 @@ function PaginationBar({ currentPage, totalPages, onPageChange }: { currentPage:
                   className="h-10 w-14 rounded-lg border-2 border-[#F2B33D]/40 bg-white text-center text-sm font-bold text-[#0F0F0F] outline-none focus:border-[#F2B33D] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </form>
+            ) : !isCurrentPageVisible ? (
+              <PaginationPageButton
+                page={currentPage}
+                isActive={true}
+                onClick={handlePageInputOpen}
+              />
             ) : (
               <button
                 type="button"
-                onClick={() => setIsEditingPage(true)}
+                onClick={handlePageInputOpen}
                 className="h-10 min-w-10 rounded-lg border-2 border-dashed border-[#F5F5F5] bg-white px-2 text-sm font-bold text-[#0F0F0F]/50 transition-all hover:border-[#F2B33D]/40 hover:text-[#F2B33D]"
                 title="Aller à une page"
               >
@@ -426,15 +438,6 @@ export default function DashboardPage() {
 
   // Quick filters
   const quickFilters = useMemo(() => {
-    const colors = [
-      "bg-blue-600 text-white shadow-blue-600/25",
-      "bg-orange-500 text-white shadow-orange-500/25",
-      "bg-emerald-500 text-white shadow-emerald-500/25",
-      "bg-[#F2B33D] text-white shadow-[#F2B33D]/25",
-      "bg-[#F2B33D] text-white shadow-[#F2B33D]/25",
-      "bg-cyan-500 text-white shadow-cyan-500/25",
-    ]
-
     const sectorCounts: Record<string, number> = {}
     campaigns.forEach((campaign) => {
       if (campaign.sector) {
@@ -445,20 +448,19 @@ export default function DashboardPage() {
     const topSectors = Object.entries(sectorCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([sector], index) => ({
+      .map(([sector]) => ({
         label: sector,
         type: "sector" as const,
         value: sector,
-        color: colors[index % colors.length],
       }))
 
     return [
-      { label: "Tous", type: "all" as const, value: "all", color: "bg-primary text-primary-foreground shadow-primary/25" },
+      { label: "Tous", type: "all" as const, value: "all" },
       ...topSectors,
     ]
   }, [campaigns])
 
-  const handleQuickFilter = (filter: { label: string; type: string; value: string; color: string }) => {
+  const handleQuickFilter = (filter: { label: string; type: string; value: string }) => {
     setActiveQuickFilter(filter.label)
     setCurrentPage(1)
 
@@ -530,6 +532,12 @@ export default function DashboardPage() {
   }, [weeklyCampaigns, filteredContent])
 
   const handleContentClick = useCallback(async (_content: ContentItem): Promise<boolean> => {
+    // Gate Premium : les campagnes "premium" sont réservées aux abonnés Pro.
+    // Les comptes Free et Basic doivent passer au Pro pour y accéder.
+    if (_content.accessLevel === 'premium' && !canAccessPremiumContent(userPlan)) {
+      showUpgrade("premium")
+      return false
+    }
     // Le tracking est désormais fait par la page détail au chargement du contenu.
     // Ici on se contente de vérifier si l'utilisateur est déjà bloqué pour
     // empêcher la navigation et afficher l'upgrade.
@@ -546,7 +554,7 @@ export default function DashboardPage() {
       // En cas d'erreur réseau, laisser passer
     }
     return true
-  }, [showUpgrade])
+  }, [showUpgrade, userPlan])
 
   const accessibleContent = filteredContent
   const totalPages = Math.ceil(accessibleContent.length / itemsPerPage)
@@ -700,8 +708,8 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => handleQuickFilter(filter)}
                     className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300 ${activeQuickFilter === filter.label
-                      ? `${filter.color} shadow-lg scale-105`
-                      : "bg-white border border-[#F5F5F5] text-[#0F0F0F]/70 hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] hover:border-[#F2B33D]/50"
+                      ? "bg-[#F2B33D] text-white shadow-md shadow-[#F2B33D]/25"
+                      : "bg-[#F5F5F5] text-[#0F0F0F]/70 hover:bg-[#F5F5F5]/80 hover:text-[#0F0F0F]"
                       }`}
                   >
                     {filter.label}

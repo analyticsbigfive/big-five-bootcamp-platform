@@ -37,7 +37,7 @@ import { getCreativeByIdOrSlug, getRelatedCampaigns } from "@/app/actions/creati
 import { useFavorites } from "@/hooks/use-favorites";
 import { cn, getGoogleDriveImageUrl, fixBrokenEncoding } from "@/lib/utils";
 import { detectVideoPlatform, getEmbedUrl, getVideoPlatformLabel, getOriginalVideoUrl } from "@/lib/video-utils";
-import { isPaidPlan } from "@/lib/pricing";
+import { isPaidPlan, canAccessPremiumContent } from "@/lib/pricing";
 import { UpgradePopup } from "@/components/upgrade-popup";
 import { ReactionButtons } from "@/components/ui/reaction-buttons";
 import { AddToCollectionModal } from "@/components/collections/add-to-collection-modal";
@@ -61,6 +61,7 @@ interface Campaign {
   category: string | null;
   tags: string[] | null;
   status: string | null;
+  access_level?: string | null;
   brand?: string | null;
   agency?: string | null;
   country?: string | null;
@@ -112,7 +113,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const { isFavorite, toggleFavorite, isAuthenticated } = useFavorites();
   const { isAdmin } = useAuth();
-  const { refreshClickCounters } = useAuthContext();
+  const { refreshClickCounters, userPlan: contextUserPlan } = useAuthContext();
   const [isToggling, setIsToggling] = useState(false);
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
   const [readProgress, setReadProgress] = useState(0);
@@ -129,6 +130,10 @@ export default function ContentDetailClient({ id }: { id: string }) {
   const [bottomSheetRemaining, setBottomSheetRemaining] = useState(0);
   const trackedRef = useRef(false);
   const isFreeUser = !isPaidPlan(userPlan);
+  // Gate Premium : seuls les abonnés Pro (ou admins) peuvent voir une campagne premium.
+  const isPremiumContent = (content?.access_level || '').toLowerCase() === 'premium';
+  const canViewPremium = isAdmin || canAccessPremiumContent(contextUserPlan);
+  const isPremiumLocked = isPremiumContent && !canViewPremium;
   const router = useRouter();
 
   // Vérifier l'état d'authentification directement
@@ -153,6 +158,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
   useEffect(() => {
     if (!authChecked || !isUserAuthenticated) return;
     if (!content) return; // attendre que la campagne soit chargée
+    if (isPremiumLocked) return; // pas de tracking pour un contenu verrouillé
     if (trackedRef.current) return;
     trackedRef.current = true;
 
@@ -419,6 +425,69 @@ export default function ContentDetailClient({ id }: { id: string }) {
           <Card>
             <CardContent className="p-8 text-center">
               <p className="text-muted-foreground">{error || 'Contenu non trouvé'}</p>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  // Gate Premium : campagne réservée aux abonnés Pro.
+  // Free et Basic sont bloqués avec un écran d'upsell.
+  if (isPremiumLocked) {
+    return (
+      <div className="min-h-screen bg-background">
+        {isUserAuthenticated ? (
+          <DashboardNavbar
+            userPlan={userPlan}
+            monthlyClicks={monthlyClicks}
+            monthlyClickLimit={MONTHLY_CLICK_LIMIT}
+            isFreeUser={isFreeUser}
+            monthlyExplored={monthlyExplored}
+          />
+        ) : (
+          <Navbar />
+        )}
+        <main className="container mx-auto px-4 py-12 max-w-2xl">
+          <Link
+            href={isUserAuthenticated ? "/dashboard" : "/"}
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {isUserAuthenticated ? "Retour à la bibliothèque" : "Retour à l'accueil"}
+          </Link>
+          <Card className="border-amber-300/60 shadow-lg shadow-amber-400/10">
+            <CardContent className="p-8 sm:p-10 text-center">
+              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
+                <Lock className="h-6 w-6 text-amber-600" />
+              </div>
+              <Badge className="mb-4 bg-amber-500/15 text-amber-700 hover:bg-amber-500/15 border border-amber-300/60">
+                Campagne Premium
+              </Badge>
+              <h1 className="font-[family-name:var(--font-heading)] text-2xl sm:text-3xl font-bold text-[#0F0F0F] mb-3">
+                Cette campagne est réservée aux abonnés Pro
+              </h1>
+              <p className="text-[#0F0F0F]/70 text-sm sm:text-base mb-6 max-w-md mx-auto">
+                Les campagnes Premium font partie de notre sélection exclusive.
+                Passez au plan Pro pour débloquer l'accès complet, l'analyse stratégique
+                et tous les contenus réservés.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  className="h-11 px-6 bg-[#F2B33D] hover:bg-[#d99a2a] text-white font-semibold"
+                  onClick={() => router.push('/subscribe')}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Passer au Pro
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-11 px-6 font-semibold"
+                  onClick={() => router.push('/pricing')}
+                >
+                  Voir les plans
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </main>

@@ -4,12 +4,14 @@ import React from "react"
 
 import Link from "next/link"
 import Image from "next/image"
-import { Play, Calendar, Globe, Facebook, Instagram, Linkedin, Youtube, Crown, Heart, Pencil } from "lucide-react"
+import { Play, Calendar, Globe, Facebook, Instagram, Linkedin, Youtube, Crown, Heart, Pencil, Lock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
+import { useAuthContext } from "@/components/auth-provider"
 import { useFavorites } from "@/hooks/use-favorites"
 import { cn, getGoogleDriveImageUrl } from "@/lib/utils"
 import { detectVideoPlatform } from "@/lib/video-utils"
+import { canAccessPremiumContent } from "@/lib/pricing"
 import { CountryFlag } from "@/components/ui/country-flag"
 import { format, parseISO } from "date-fns"
 import { fr } from "date-fns/locale"
@@ -63,18 +65,6 @@ const platformConfig: Record<string, { bg: string; icon: React.ReactNode }> = {
   "Outdoor": { bg: "bg-[#0A1F44]", icon: <span className="text-xs font-bold text-white">OOH</span> },
 }
 
-const sectorColors: Record<string, string> = {
-  "Telecoms": "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/20",
-  "Banque/Finance": "bg-[#F2B33D] text-white font-semibold shadow-md shadow-[#F2B33D]/20",
-  "FMCG": "bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20",
-  "E-commerce": "bg-[#F2B33D] text-white font-semibold shadow-md shadow-[#F2B33D]/20",
-  "Tech": "bg-cyan-600 text-white font-semibold shadow-md shadow-cyan-600/20",
-  "Mode": "bg-rose-600 text-white font-semibold shadow-md shadow-rose-600/20",
-  "Energie": "bg-yellow-500 text-white font-semibold shadow-md shadow-yellow-500/20",
-  "Industrie": "bg-slate-600 text-white font-semibold shadow-md shadow-slate-600/20",
-}
-
-
 // Formate la date en français (ex: "15 janvier 2024")
 function formatDateFr(dateString: string): string {
   try {
@@ -87,9 +77,13 @@ function formatDateFr(dateString: string): string {
 
 export function ContentCard({ content, viewMode = "grid", onBeforeNavigate, isBlocked }: ContentCardProps) {
   const platform = platformConfig[content.platform] || { bg: "bg-gray-500", icon: <span className="text-xs font-bold text-white">?</span> }
-  const sectorColor = sectorColors[content.sector] || "bg-muted text-muted-foreground font-semibold"
+  const sectorColor = "bg-[#F5F5F5]/60 text-[#0F0F0F]/80 font-medium"
   const isPremium = content.accessLevel === 'premium'
   const { isAdmin } = useAuth()
+  const { userPlan } = useAuthContext()
+  // Verrou Premium : seuls les abonnés Pro (ou admins) peuvent ouvrir une campagne premium.
+  // Free et Basic voient l'image floutée et la navigation est bloquée côté carte.
+  const isPremiumLocked = isPremium && !isAdmin && !canAccessPremiumContent(userPlan)
   const { isFavorite, toggleFavorite, isAuthenticated, loading: favLoading } = useFavorites()
   const [isToggling, setIsToggling] = React.useState(false)
   const isCurrentFavorite = isFavorite(content.id)
@@ -107,6 +101,9 @@ export function ContentCard({ content, viewMode = "grid", onBeforeNavigate, isBl
   }
 
   const handleClick = async (e: React.MouseEvent) => {
+    if (isPremiumLocked) {
+      e.preventDefault()
+    }
     if (onBeforeNavigate) {
       const allowed = await onBeforeNavigate(content)
       if (!allowed) {
@@ -136,13 +133,24 @@ export function ContentCard({ content, viewMode = "grid", onBeforeNavigate, isBl
                 alt={content.title}
                 fill
                 sizes="160px"
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                className={cn(
+                  "object-cover transition-transform duration-300 group-hover:scale-105",
+                  isPremiumLocked && "blur-md scale-110 group-hover:scale-110"
+                )}
                 loading="lazy"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
                 <div className="text-2xl font-bold text-white/20">
                   {content.title.substring(0, 2).toUpperCase()}
+                </div>
+              </div>
+            )}
+            {/* Overlay verrou Premium */}
+            {isPremiumLocked && (
+              <div className="absolute inset-0 z-[5] flex items-center justify-center bg-black/40">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-lg">
+                  <Lock className="h-4 w-4 text-amber-600" />
                 </div>
               </div>
             )}
@@ -248,7 +256,10 @@ export function ContentCard({ content, viewMode = "grid", onBeforeNavigate, isBl
               alt={content.title}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className={cn(
+                "object-cover transition-transform duration-300 group-hover:scale-105",
+                isPremiumLocked && "blur-lg scale-110 group-hover:scale-110"
+              )}
               loading="lazy"
             />
           ) : (
@@ -256,6 +267,18 @@ export function ContentCard({ content, viewMode = "grid", onBeforeNavigate, isBl
               <div className="text-4xl font-bold text-white/20">
                 {content.title.substring(0, 2).toUpperCase()}
               </div>
+            </div>
+          )}
+
+          {/* Overlay verrou Premium */}
+          {isPremiumLocked && (
+            <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-2 bg-black/45">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 shadow-xl">
+                <Lock className="h-5 w-5 text-amber-600" />
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-white drop-shadow-md">
+                Réservé au Pro
+              </span>
             </div>
           )}
 

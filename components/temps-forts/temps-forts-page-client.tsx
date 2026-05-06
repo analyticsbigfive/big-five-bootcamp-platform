@@ -3,42 +3,30 @@
 import { useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Calendar, ChevronDown, ChevronRight, Filter, RotateCcw, Sparkles, X } from "lucide-react"
+import { Calendar, ChevronRight, Filter, RotateCcw, Sparkles, X } from "lucide-react"
 import { DashboardNavbar } from "@/components/dashboard/dashboard-navbar"
 import { Button } from "@/components/ui/button"
-import { getTempsFortFilterOptions, getTempsFortStatus, getTodayISO } from "@/lib/temps-forts"
+import { getTempsFortStatus, getTodayISO } from "@/lib/temps-forts"
 import type { TempsFort } from "@/types/temps-fort"
 import { useTempsForts } from "./use-temps-forts"
 
-type FilterKey = "Secteur" | "Axe créatif" | "Pays" | "Tags" | "Format" | "Plateforme"
-
-const FILTER_MAP: Record<FilterKey, keyof ReturnType<typeof getTempsFortFilterOptions>> = {
-  Secteur: "sectors",
-  "Axe créatif": "axes",
-  Pays: "countries",
-  Tags: "tags",
-  Format: "formats",
-  Plateforme: "platforms",
-}
-
-const EVENT_FIELD_MAP: Record<FilterKey, keyof Pick<TempsFort, "sectors" | "axes" | "countries" | "tags" | "formats" | "platforms">> = {
-  Secteur: "sectors",
-  "Axe créatif": "axes",
-  Pays: "countries",
-  Tags: "tags",
-  Format: "formats",
-  Plateforme: "platforms",
+type TagOption = {
+  name: string
+  count: number
 }
 
 export function TempsFortsPageClient() {
   const { tempsForts, loading } = useTempsForts()
-  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({})
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [sortMode, setSortMode] = useState<"recent" | "popular">("recent")
 
   const today = getTodayISO()
-  const filterOptions = useMemo(() => getTempsFortFilterOptions(tempsForts), [tempsForts])
+  const allTags = useMemo(
+    () => Array.from(new Set(tempsForts.flatMap((tempsFort) => tempsFort.tags))).sort((a, b) => a.localeCompare(b, "fr")),
+    [tempsForts],
+  )
 
   const filteredTempsForts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -64,34 +52,45 @@ export function TempsFortsPageClient() {
         if (!haystack.includes(query)) return false
       }
 
-      return (Object.keys(EVENT_FIELD_MAP) as FilterKey[]).every((filterKey) => {
-        const values = selectedFilters[filterKey] || []
-        if (values.length === 0) return true
-
-        const eventValues = tempsFort[EVENT_FIELD_MAP[filterKey]]
-        return eventValues.some((value) => values.includes(value))
-      })
+      if (selectedTags.length === 0) return true
+      return tempsFort.tags.some((tag) => selectedTags.includes(tag))
     })
 
     return filtered.sort((a, b) => {
       if (sortMode === "popular") return b.campaignCount - a.campaignCount
       return b.eventDate.localeCompare(a.eventDate)
     })
-  }, [searchQuery, selectedFilters, sortMode, tempsForts])
+  }, [searchQuery, selectedTags, sortMode, tempsForts])
 
   const momentTempsForts = filteredTempsForts.filter((tempsFort) => getTempsFortStatus(tempsFort, today) === "active")
   const allTempsForts = filteredTempsForts.filter((tempsFort) => !momentTempsForts.some((moment) => moment.id === tempsFort.id))
-  const totalFilters = Object.values(selectedFilters).flat().length
+  const totalFilters = selectedTags.length
 
-  const toggleFilter = (group: FilterKey, value: string) => {
-    const current = selectedFilters[group] || []
-    setSelectedFilters({
-      ...selectedFilters,
-      [group]: current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
-    })
+  const dynamicTagOptions = useMemo<TagOption[]>(() => {
+    const counts = new Map<string, number>()
+
+    for (const tempsFort of filteredTempsForts) {
+      for (const tag of tempsFort.tags) {
+        counts.set(tag, (counts.get(tag) || 0) + 1)
+      }
+    }
+
+    const selectedMissing = selectedTags.filter((tag) => !counts.has(tag))
+    for (const tag of selectedMissing) {
+      counts.set(tag, 0)
+    }
+
+    const source = counts.size > 0 ? Array.from(counts.keys()) : allTags
+    return source
+      .sort((a, b) => a.localeCompare(b, "fr"))
+      .map((name) => ({ name, count: counts.get(name) || 0 }))
+  }, [allTags, filteredTempsForts, selectedTags])
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((current) => (current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]))
   }
 
-  const clearFilters = () => setSelectedFilters({})
+  const clearFilters = () => setSelectedTags([])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-white to-[#F5F5F5]/40">
@@ -99,11 +98,11 @@ export function TempsFortsPageClient() {
 
       <div className="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex gap-8">
-          <TempsFortsFilters
-            filterOptions={filterOptions}
-            selectedFilters={selectedFilters}
+          <TempsFortsTagsFilters
+            tags={dynamicTagOptions}
+            selectedTags={selectedTags}
             totalFilters={totalFilters}
-            onToggleFilter={toggleFilter}
+            onToggleTag={toggleTag}
             onClear={clearFilters}
             className="hidden w-64 shrink-0 lg:block"
           />
@@ -118,17 +117,17 @@ export function TempsFortsPageClient() {
               />
               <div className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto rounded-t-2xl bg-white p-4">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="font-[family-name:var(--font-heading)] text-lg font-bold">Filtres</h2>
+                  <h2 className="font-[family-name:var(--font-heading)] text-lg font-bold">Tags</h2>
                   <Button variant="ghost" size="sm" onClick={() => setShowMobileFilters(false)}>
                     <X className="mr-2 h-4 w-4" />
                     Fermer
                   </Button>
                 </div>
-                <TempsFortsFilters
-                  filterOptions={filterOptions}
-                  selectedFilters={selectedFilters}
+                <TempsFortsTagsFilters
+                  tags={dynamicTagOptions}
+                  selectedTags={selectedTags}
                   totalFilters={totalFilters}
-                  onToggleFilter={toggleFilter}
+                  onToggleTag={toggleTag}
                   onClear={clearFilters}
                 />
               </div>
@@ -154,12 +153,13 @@ export function TempsFortsPageClient() {
                   onClick={() => setShowMobileFilters(true)}
                 >
                   <Filter className="mr-2 h-4 w-4" />
-                  Filtres
+                  Tags {totalFilters > 0 ? `(${totalFilters})` : ""}
                 </Button>
 
                 <select
                   value={sortMode}
                   onChange={(event) => setSortMode(event.target.value as "recent" | "popular")}
+                  aria-label="Trier les temps forts"
                   className="h-10 rounded-xl border border-[#F5F5F5] bg-white px-4 text-sm font-semibold text-[#0F0F0F] shadow-sm outline-none transition focus:border-[#F2B33D]"
                 >
                   <option value="recent">Les plus récents</option>
@@ -217,30 +217,27 @@ export function TempsFortsPageClient() {
   )
 }
 
-function TempsFortsFilters({
-  filterOptions,
-  selectedFilters,
+function TempsFortsTagsFilters({
+  tags,
+  selectedTags,
   totalFilters,
-  onToggleFilter,
+  onToggleTag,
   onClear,
   className,
 }: {
-  filterOptions: ReturnType<typeof getTempsFortFilterOptions>
-  selectedFilters: Record<string, string[]>
+  tags: TagOption[]
+  selectedTags: string[]
   totalFilters: number
-  onToggleFilter: (group: FilterKey, value: string) => void
+  onToggleTag: (tag: string) => void
   onClear: () => void
   className?: string
 }) {
-  const [expandedGroups, setExpandedGroups] = useState<FilterKey[]>(["Secteur", "Pays", "Tags"])
-  const groups = Object.keys(FILTER_MAP) as FilterKey[]
-
   return (
     <aside className={className}>
       <div className="sticky top-20">
         <div className="mb-3 flex items-center justify-between border-b border-[#F5F5F5] pb-4">
           <h2 className="font-[family-name:var(--font-heading)] text-base font-extrabold uppercase tracking-wide text-[#0F0F0F]">
-            Filtres
+            Tags
           </h2>
           {totalFilters > 0 && (
             <button
@@ -254,56 +251,26 @@ function TempsFortsFilters({
           )}
         </div>
 
-        <div className="space-y-2">
-          {groups.map((group) => {
-            const options = filterOptions[FILTER_MAP[group]]
-            const selected = selectedFilters[group] || []
-            const expanded = expandedGroups.includes(group)
-
-            return (
-              <div key={group} className="overflow-hidden rounded-xl border border-[#F5F5F5] bg-white">
+        <div className="rounded-xl border border-[#F5F5F5] bg-white p-3">
+          <div className="flex max-h-[60vh] flex-wrap gap-2 overflow-y-auto">
+            {tags.map((tagOption) => {
+              const active = selectedTags.includes(tagOption.name)
+              return (
                 <button
+                  key={tagOption.name}
                   type="button"
-                  onClick={() =>
-                    setExpandedGroups((current) =>
-                      current.includes(group) ? current.filter((item) => item !== group) : [...current, group],
-                    )
-                  }
-                  className="flex w-full items-center justify-between px-4 py-3 text-left"
+                  onClick={() => onToggleTag(tagOption.name)}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-bold transition ${
+                    active
+                      ? "border-[#F2B33D] bg-[#F2B33D] text-white"
+                      : "border-[#F5F5F5] bg-white text-[#0F0F0F]/80 hover:border-[#F2B33D]/40 hover:text-[#0F0F0F]"
+                  }`}
                 >
-                  <span className="flex items-center gap-2 text-sm font-extrabold text-[#0F0F0F]">
-                    {group}
-                    <span className="text-xs font-bold text-[#0F0F0F]/45">({options.length})</span>
-                    {selected.length > 0 && (
-                      <span className="rounded-full bg-[#F2B33D] px-2 py-0.5 text-xs text-white">{selected.length}</span>
-                    )}
-                  </span>
-                  <ChevronDown className={`h-4 w-4 text-[#0F0F0F]/55 transition ${expanded ? "rotate-180" : ""}`} />
+                  #{tagOption.name} ({tagOption.count})
                 </button>
-
-                {expanded && (
-                  <div className="max-h-56 space-y-1 overflow-y-auto border-t border-[#F5F5F5] px-3 py-3">
-                    {options.map((option) => {
-                      const active = selected.includes(option)
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => onToggleFilter(group, option)}
-                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${
-                            active ? "bg-[#F2B33D] text-white" : "bg-white text-[#0F0F0F] hover:bg-[#F5F5F5]"
-                          }`}
-                        >
-                          <span className={`h-4 w-4 rounded border ${active ? "border-white bg-white" : "border-[#E8E8E8]"}`} />
-                          <span className="truncate">{option}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
     </aside>
@@ -410,7 +377,7 @@ function EmptyState({ onClear }: { onClear: () => void }) {
   return (
     <div className="rounded-2xl border border-dashed border-[#F2B33D]/40 bg-[#F2B33D]/5 p-8 text-center">
       <h3 className="font-[family-name:var(--font-heading)] text-xl font-extrabold text-[#0F0F0F]">
-        Aucun temps fort ne correspond à ces filtres
+        Aucun temps fort ne correspond à ces tags
       </h3>
       <p className="mx-auto mt-2 max-w-md text-sm font-medium text-[#0F0F0F]/60">
         Essayez de retirer un filtre pour retrouver des inspirations actives.

@@ -347,12 +347,12 @@ export function PreviewSection() {
               ))}
             </ul>
 
-            <div className="mt-10">
+{/*             <div className="mt-10">
               <Button variant="ghost" className="text-[#F2B33D] hover:text-[#F2B33D]/80 hover:bg-[#F2B33D]/5 p-0 font-semibold group">
                 {t.cta}
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
-            </div>
+            </div> */}
           </div>
 
           <div className="lg:col-span-6 relative">
