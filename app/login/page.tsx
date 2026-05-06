@@ -99,7 +99,7 @@ export default function LoginPage() {
               Content de te revoir !
             </h1>
             <p className="mt-3 text-muted-foreground">
-              Connecte-toi pour acceder a ta bibliotheque
+              Connecte-toi pour accéder à ta bibliothèque
             </p>
           </div>
 
@@ -129,7 +129,7 @@ export default function LoginPage() {
                     Mot de passe
                   </Label>
                   <Link href="/forgot-password" className="text-sm font-medium text-primary hover:text-primary/80">
-                    Mot de passe oublie ?
+                    Mot de passe oublié ?
                   </Link>
                 </div>
                 <div className="relative mt-1.5">
@@ -187,15 +187,15 @@ export default function LoginPage() {
             <div className="max-w-md text-center">
               <span className="inline-flex items-center gap-2 rounded-full bg-[#F2B33D]/10 px-4 py-1.5 text-sm font-medium text-[#F2B33D] mb-6">
                 <Sparkles className="h-4 w-4 text-[#F2B33D]" />
-                Plateforme creative
+                Plateforme créative
               </span>
               <h2 className="font-[family-name:var(--font-heading)] text-4xl font-bold text-[#0F0F0F]">
                 <span>
-                  {"L'inspiration creative"}
+                  {"L'inspiration créative"}
                 </span>
                 <br />
                 <span className="text-[#F2B33D]">
-                  a portee de clic
+                  à portée de clic
                 </span>
               </h2>
               <p className="mt-6 text-lg text-[#0F0F0F]/70">

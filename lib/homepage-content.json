@@ -118,12 +118,12 @@
           "3 campagnes consultables / jour",
           "Favoris",
           "Alertes email hebdo",
-          "3 recherches par filtre / jour"
+          "3 recherches par filtre / jour",
+          "Suivi de marques (sur devis)"
         ],
         "excluded": [
           "Collections personnalisées",
           "Téléchargement de visuels",
-          "Suivi de marques",
           "Séance de débrief"
         ]
       },
@@ -147,10 +147,10 @@
           "Collections personnalisées",
           "Téléchargement de visuels",
           "Alertes email hebdo",
-          "15 recherches par filtre / jour"
+          "15 recherches par filtre / jour",
+          "Suivi de marques (sur devis)"
         ],
         "excluded": [
-          "Suivi de marques",
           "Séance de débrief avec l'équipe Big Five"
         ]
       },
@@ -200,7 +200,7 @@
         { "name": "Téléchargement de visuels", "free": false, "basic": true, "pro": true },
         { "name": "Alertes email hebdo", "free": true, "basic": true, "pro": true },
         { "name": "Limite de recherche par filtre", "free": "3 par jour", "basic": "15 par jour", "pro": "Illimité" },
-        { "name": "Suivi de marques", "free": false, "basic": false, "pro": true },
+        { "name": "Suivi de marques", "free": "Sur devis", "basic": "Sur devis", "pro": "Sur devis" },
         { "name": "Séance de débrief avec l'équipe Big Five", "free": false, "basic": false, "pro": true }
       ]
     }

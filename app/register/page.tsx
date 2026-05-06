@@ -88,10 +88,10 @@ export default function RegisterPage() {
   }
 
   const benefits = [
-    "Acces a toute la bibliotheque",
-    "Nouveaux contenus ajoutes quotidiennement",
-    "Filtres et recherche avances",
-    "Annulation possible a tout moment"
+    "Accès à toute la bibliothèque",
+    "Nouveaux contenus ajoutés quotidiennement",
+    "Filtres et recherche avancés",
+    "Annulation possible à tout moment"
   ]
 
   return (
@@ -108,10 +108,10 @@ export default function RegisterPage() {
               </div>
               
               <h2 className="font-[family-name:var(--font-heading)] text-3xl font-bold text-[#0F0F0F]">
-                Rejoins des milliers de creatifs africains
+                Rejoins des milliers de créatifs africains
               </h2>
               <p className="mt-4 text-lg text-[#0F0F0F]/70">
-                Decouvre les meilleures campagnes marketing du continent africain.
+                Découvre les meilleures campagnes marketing du continent africain.
               </p>
               
               <ul className="mt-8 space-y-4">
@@ -213,7 +213,7 @@ export default function RegisterPage() {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Minimum 8 caracteres"
+                    placeholder="Minimum 8 caractères"
                     className="h-11 pl-10 pr-10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -268,17 +268,17 @@ export default function RegisterPage() {
               className="h-11 w-full shadow-lg shadow-primary/25"
               disabled={isLoading || !acceptTerms}
             >
-              {isLoading ? "Creation du compte..." : "Creer mon compte"}
+              {isLoading ? "Création du compte..." : "Créer mon compte"}
             </Button>
 
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3 w-3" />
-              Donnees securisees
+              Données sécurisées
             </div>
           </form>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            Deja inscrit ?{" "}
+            Déjà inscrit ?{" "}
             <Link href={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login"} className="font-medium text-primary hover:text-primary/80">
               Connexion
             </Link>

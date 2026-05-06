@@ -698,23 +698,80 @@ export default function BrandRequestsPage() {
                     Nouvelle demande de suivi de marque
                   </h2>
 
-                  {/* 1) Nom de la marque — combobox avec marques connues */}
+                  {/* 1) Marques — multi-sélection avec autocomplétion */}
                   <div className="mb-5">
                     <label htmlFor="brandName" className="block text-sm font-medium text-[#0F0F0F]/80 mb-1.5">
-                      Nom de la marque <span className="text-red-500">*</span>
+                      Marques à suivre <span className="text-red-500">*</span>
+                      <span className="ml-2 text-xs font-normal text-[#0F0F0F]/50">
+                        (sélectionnez-en autant que nécessaire)
+                      </span>
                     </label>
+
+                    {/* Chips des marques déjà sélectionnées */}
+                    {selectedBrands.length > 0 && (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {selectedBrands.map((b) => {
+                          const isKnown = knownBrands.some((k) => k.toLowerCase() === b.toLowerCase())
+                          return (
+                            <span
+                              key={b}
+                              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border ${
+                                isKnown
+                                  ? 'bg-[#F2B33D]/10 border-[#F2B33D]/30 text-[#0F0F0F]'
+                                  : 'bg-[#F5F5F5]/60 border-[#F5F5F5] text-[#0F0F0F]'
+                              }`}
+                            >
+                              {!isKnown && <Sparkles className="h-3 w-3 text-[#F2B33D]" />}
+                              {b}
+                              <button
+                                type="button"
+                                onClick={() => removeBrand(b)}
+                                className="ml-0.5 rounded-full p-0.5 hover:bg-black/5"
+                                aria-label={`Retirer ${b}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+
                     <div ref={brandInputRef} className="relative">
                       <input
                         id="brandName"
                         type="text"
-                        value={brandName}
-                        onChange={(e) => { setBrandName(e.target.value); setBrandDropdownOpen(true) }}
+                        value={brandQuery}
+                        onChange={(e) => { setBrandQuery(e.target.value); setBrandDropdownOpen(true) }}
                         onFocus={() => setBrandDropdownOpen(true)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            if (brandQuery.trim() && !isQueryAlreadySelected) {
+                              addBrand(brandQuery)
+                            }
+                          } else if (e.key === 'Backspace' && !brandQuery && selectedBrands.length > 0) {
+                            // Retire la dernière chip avec Backspace sur input vide
+                            removeBrand(selectedBrands[selectedBrands.length - 1])
+                          }
+                        }}
                         autoComplete="off"
-                        placeholder="Ex: MTN, Orange, Coca-Cola..."
-                        className="w-full rounded-lg border border-[#F5F5F5] pl-3 pr-9 py-2 text-sm text-[#0F0F0F] outline-none focus:border-[#F2B33D] focus:ring-2 focus:ring-[#F2B33D]/20"
-                        required
+                        placeholder={
+                          selectedBrands.length === 0
+                            ? "Ex: MTN, Orange, Coca-Cola..."
+                            : "Ajouter une autre marque..."
+                        }
+                        className="w-full rounded-lg border border-[#F5F5F5] pl-3 pr-20 py-2 text-sm text-[#0F0F0F] outline-none focus:border-[#F2B33D] focus:ring-2 focus:ring-[#F2B33D]/20"
                       />
+                      {brandQuery.trim() && !isQueryAlreadySelected && (
+                        <button
+                          type="button"
+                          onClick={() => addBrand(brandQuery)}
+                          className="absolute right-9 top-1/2 -translate-y-1/2 rounded-md bg-[#F2B33D] px-2 py-1 text-xs font-semibold text-white hover:bg-[#F2B33D]/90"
+                        >
+                          Ajouter
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setBrandDropdownOpen((v) => !v)}
@@ -729,50 +786,51 @@ export default function BrandRequestsPage() {
                         <div className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-[#F5F5F5] bg-white shadow-lg">
                           {filteredBrands.length > 0 ? (
                             <ul className="py-1">
-                              {filteredBrands.map((b) => {
-                                const selected = b.toLowerCase() === normalizedBrand
-                                return (
-                                  <li key={b}>
-                                    <button
-                                      type="button"
-                                      onClick={() => { setBrandName(b); setBrandDropdownOpen(false) }}
-                                      className={`flex w-full items-center justify-between px-3 py-2 text-sm text-left hover:bg-[#F4F8FB] ${
-                                        selected ? 'bg-[#F2B33D]/5 text-[#F2B33D] font-medium' : 'text-[#0F0F0F]'
-                                      }`}
-                                    >
-                                      <span className="truncate">{b}</span>
-                                      {selected && <Check className="h-4 w-4 shrink-0" />}
-                                    </button>
-                                  </li>
-                                )
-                              })}
+                              {filteredBrands.map((b) => (
+                                <li key={b}>
+                                  <button
+                                    type="button"
+                                    onClick={() => addBrand(b)}
+                                    className="flex w-full items-center justify-between px-3 py-2 text-sm text-left hover:bg-[#F4F8FB] text-[#0F0F0F]"
+                                  >
+                                    <span className="truncate">{b}</span>
+                                    <Plus className="h-4 w-4 shrink-0 text-[#0F0F0F]/40" />
+                                  </button>
+                                </li>
+                              ))}
                             </ul>
                           ) : (
                             <div className="px-3 py-3 text-xs text-[#0F0F0F]/50">
                               {knownBrands.length === 0
                                 ? "Aucune marque répertoriée pour le moment."
-                                : "Aucune marque ne correspond — ce sera une nouvelle demande."}
+                                : normalizedQuery
+                                  ? "Aucune marque ne correspond — appuyez sur Entrée ou « Ajouter » pour créer une nouvelle demande."
+                                  : "Toutes les marques répertoriées sont déjà sélectionnées."}
                             </div>
                           )}
                         </div>
                       )}
                     </div>
 
-                    {/* Badge d'état : marque connue vs nouvelle */}
-                    {brandName.trim() && (
+                    {/* Badge d'état global */}
+                    {selectedBrands.length > 0 && (
                       <p className="mt-2 flex items-center gap-1.5 text-xs">
-                        {isKnownBrand ? (
+                        {hasNewBrandSelected ? (
                           <>
-                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            <span className="text-green-700">
-                              Marque déjà suivie — les liens ne sont pas nécessaires.
+                            <Sparkles className="h-3.5 w-3.5 text-[#F2B33D]" />
+                            <span className="text-[#0F0F0F]/60">
+                              {selectedBrands.length === 1
+                                ? "Nouvelle marque — merci d'indiquer au moins un lien ci-dessous."
+                                : "Au moins une nouvelle marque sélectionnée — merci d'indiquer au moins un lien ci-dessous."}
                             </span>
                           </>
                         ) : (
                           <>
-                            <Sparkles className="h-3.5 w-3.5 text-[#F2B33D]" />
-                            <span className="text-[#0F0F0F]/60">
-                              Nouvelle marque — merci d'indiquer au moins un lien ci-dessous.
+                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                            <span className="text-green-700">
+                              {selectedBrands.length === 1
+                                ? "Marque déjà suivie — les liens ne sont pas nécessaires."
+                                : "Toutes les marques sont déjà suivies — les liens ne sont pas nécessaires."}
                             </span>
                           </>
                         )}
@@ -828,7 +886,8 @@ export default function BrandRequestsPage() {
                   </fieldset>
 
                   {/* 3) Liens — masqués si la marque est déjà suivie */}
-                  {!isKnownBrand && (
+                  {/* 3) Liens — affichés dès qu'au moins une nouvelle marque est sélectionnée */}
+                  {hasNewBrandSelected && (
                     <div className="mb-5">
                       <label htmlFor="brandUrls" className="block text-sm font-medium text-[#0F0F0F]/80 mb-1.5">
                         Lien(s) <span className="text-red-500">*</span>
