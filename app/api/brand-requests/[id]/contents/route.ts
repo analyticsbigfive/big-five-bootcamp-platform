@@ -1,8 +1,12 @@
 /**
  * GET /api/brand-requests/[id]/contents
  *
- * Renvoie les campagnes (table `campaigns`, status='Publié') correspondant aux
- * critères de la demande de suivi : marque + (pays) + (secteurs) + (canaux).
+ * Renvoie les campagnes manuellement rattachées par l'équipe admin à cette
+ * demande de suivi (table de liaison `brand_request_campaigns`).
+ *
+ * Plus d'association automatique par pays / secteurs / plateformes : c'est
+ * l'admin qui décide explicitement, dans /admin/brand-requests, quelles
+ * campagnes apparaissent ici.
  *
  * La demande doit appartenir à l'utilisateur connecté, être approuvée
  * (status='completed') et payée (paid_at non null).
@@ -34,7 +38,7 @@ export async function GET(
     const admin = getSupabaseAdmin()
     const { data: req, error } = await admin
       .from('brand_requests')
-      .select('id, user_id, brand_name, status, paid_at, countries, sectors, country, sector, social_networks')
+      .select('id, user_id, brand_name, status, paid_at')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
@@ -50,31 +54,33 @@ export async function GET(
       return NextResponse.json({ contents: [], status: req.status, paid: isPaid })
     }
 
-    // Critères multi-valeurs (avec fallback sur les anciens champs single)
-    const countries: string[] = Array.isArray((req as any).countries) && (req as any).countries.length > 0
-      ? (req as any).countries
-      : (req as any).country ? [(req as any).country] : []
-    const sectors: string[] = Array.isArray((req as any).sectors) && (req as any).sectors.length > 0
-      ? (req as any).sectors
-      : (req as any).sector ? [(req as any).sector] : []
-    const channels: string[] = Array.isArray((req as any).social_networks)
-      ? (req as any).social_networks
-      : []
+    // Campagnes manuellement rattachées par l'admin
+    const { data: links, error: linksErr } = await admin
+      .from('brand_request_campaigns')
+      .select('campaign_id, added_at')
+      .eq('brand_request_id', id)
+      .order('added_at', { ascending: false })
 
-    let q = admin
+    if (linksErr) {
+      return NextResponse.json({ error: linksErr.message }, { status: 500 })
+    }
+
+    const ids = (links || []).map((l: any) => l.campaign_id)
+    if (ids.length === 0) {
+      return NextResponse.json({ contents: [], status: req.status })
+    }
+
+    const { data: campaigns } = await admin
       .from('campaigns')
       .select('*')
-      .ilike('brand', req.brand_name)
+      .in('id', ids)
       .eq('status', 'Publié')
 
-    if (countries.length > 0) q = q.in('country', countries)
-    if (sectors.length > 0) q = q.in('category', sectors)
-    // platforms est un TEXT[] dans campaigns : `&&` (overlap) côté PG via .overlaps()
-    if (channels.length > 0) q = q.overlaps('platforms', channels)
+    // Conserver l'ordre des rattachements (les plus récents d'abord)
+    const byId = new Map((campaigns || []).map((c: any) => [c.id, c]))
+    const ordered = ids.map((cid) => byId.get(cid)).filter(Boolean)
 
-    const { data: campaigns } = await q.order('created_at', { ascending: false })
-
-    return NextResponse.json({ contents: campaigns || [], status: req.status })
+    return NextResponse.json({ contents: ordered, status: req.status })
   } catch (e: any) {
     console.error('[brand-requests/:id/contents]', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

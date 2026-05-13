@@ -129,9 +129,12 @@ export default function BrandRequestsPage() {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [selectedSocials, setSelectedSocials] = useState<Set<SocialCode>>(new Set())
   const [linksText, setLinksText] = useState("") // un lien par ligne (optionnel)
-  // Multi-sélection pays / secteurs (whitelistés depuis les campagnes publiées)
+  // Multi-sélection pays / secteurs : suggestions issues des campagnes existantes
+  // + saisie libre autorisée (l'admin qualifie ensuite côté backoffice).
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
   const [selectedSectors, setSelectedSectors] = useState<string[]>([])
+  const [countryQuery, setCountryQuery] = useState("")
+  const [sectorQuery, setSectorQuery] = useState("")
   const [objective, setObjective] = useState("")
   const [notes, setNotes] = useState("")
   const [legalConsent, setLegalConsent] = useState(false)
@@ -144,7 +147,7 @@ export default function BrandRequestsPage() {
   const [knownBrands, setKnownBrands] = useState<string[]>([])
   // Mapping brand → secteurs déduits depuis les campagnes (ex: { "MTN": ["Télécom"] })
   const [brandSectors, setBrandSectors] = useState<Record<string, string[]>>({})
-  // Pays et secteurs extraits du système (champs fermés, pas de saisie libre)
+  // Pays et secteurs extraits du système (suggestions, mais saisie libre acceptée)
   const [knownCountries, setKnownCountries] = useState<string[]>([])
   const [knownSectors, setKnownSectors] = useState<string[]>([])
   const [brandDropdownOpen, setBrandDropdownOpen] = useState(false)
@@ -465,6 +468,8 @@ export default function BrandRequestsPage() {
     setLinksText("")
     setSelectedCountries([])
     setSelectedSectors([])
+    setCountryQuery("")
+    setSectorQuery("")
     setObjective("")
     setNotes("")
     setLegalConsent(false)
@@ -489,6 +494,26 @@ export default function BrandRequestsPage() {
         ? prev.filter((s) => s.toLowerCase() !== lower)
         : [...prev, value]
     )
+  }
+
+  // Ajout d'une valeur libre (pays / secteur) saisie au clavier — utilisé pour
+  // permettre des marchés / secteurs encore non référencés en base. L'admin
+  // qualifie ensuite la demande côté backoffice.
+  const addCountryFreeText = () => {
+    const v = countryQuery.trim()
+    if (!v) return
+    if (!selectedCountries.some((c) => c.toLowerCase() === v.toLowerCase())) {
+      setSelectedCountries((prev) => [...prev, v])
+    }
+    setCountryQuery("")
+  }
+  const addSectorFreeText = () => {
+    const v = sectorQuery.trim()
+    if (!v) return
+    if (!selectedSectors.some((s) => s.toLowerCase() === v.toLowerCase())) {
+      setSelectedSectors((prev) => [...prev, v])
+    }
+    setSectorQuery("")
   }
 
   // Étape 1 : validation des champs et ouverture du pop-up explicatif.
@@ -880,9 +905,29 @@ export default function BrandRequestsPage() {
                   onSubmit={handleSubmit}
                   className="mb-8 rounded-xl border border-[#F5F5F5] bg-white p-6 shadow-sm"
                 >
-                  <h2 className="text-lg font-bold text-[#0F0F0F] mb-4">
+                  <h2 className="text-lg font-bold text-[#0F0F0F] mb-2">
                     Nouvelle demande de suivi de marque
                   </h2>
+
+                  {/* Bandeau d'explication : il s'agit d'une prestation sur devis
+                      et non d'un service automatique intégré à la plateforme. */}
+                  <div className="mb-5 rounded-lg border border-[#F2B33D]/30 bg-[#F2B33D]/5 p-4 text-sm text-[#0F0F0F]/80 space-y-1.5">
+                    <p className="font-semibold text-[#0F0F0F] flex items-center gap-1.5">
+                      <Sparkles className="h-4 w-4 text-[#F2B33D]" />
+                      Une prestation sur mesure, pas un suivi automatique
+                    </p>
+                    <p>
+                      Cette demande <strong>ne déclenche pas un suivi automatique ou régulier</strong> intégré
+                      à la plateforme. Il s'agit d'une <strong>prestation spécifique réalisée sur demande</strong>,
+                      pour laquelle l'équipe LAVEIYE analyse une ou plusieurs marques selon un périmètre défini
+                      avec vous.
+                    </p>
+                    <p className="text-xs text-[#0F0F0F]/60">
+                      Renseignez les éléments ci-dessous pour permettre à l'équipe d'évaluer la demande et
+                      d'établir un devis adapté. Les pays et secteurs sont des suggestions — vous pouvez
+                      saisir librement ceux qui ne figurent pas dans la liste.
+                    </p>
+                  </div>
 
                   {/* 1) Marques — multi-sélection avec autocomplétion */}
                   <div className="mb-5">
@@ -1094,36 +1139,82 @@ export default function BrandRequestsPage() {
                     </div>
                   )}
 
-                  {/* Pays / Secteur — multi-sélection (chips toggle) */}
+                  {/* Pays / Secteur — multi-sélection (chips toggle) + saisie libre */}
                   <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-[#0F0F0F]/80 mb-1.5">
-                        Pays ou marchés concernés <span className="text-[#0F0F0F]/40 font-normal">(optionnel, multi-sélection)</span>
+                        Pays ou marchés concernés <span className="text-[#0F0F0F]/40 font-normal">(optionnel)</span>
                       </label>
-                      {knownCountries.length === 0 ? (
-                        <p className="text-xs text-[#0F0F0F]/50">
-                          Aucun pays répertorié pour le moment.
-                        </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5 rounded-lg border border-[#F5F5F5] bg-white p-2 max-h-44 overflow-y-auto">
-                          {knownCountries.map((c) => {
-                            const checked = selectedCountries.some((s) => s.toLowerCase() === c.toLowerCase())
+
+                      {/* Chips des valeurs sélectionnées — inclut les saisies libres */}
+                      {selectedCountries.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                          {selectedCountries.map((c) => {
+                            const isKnown = knownCountries.some((k) => k.toLowerCase() === c.toLowerCase())
                             return (
+                              <span
+                                key={c}
+                                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border ${
+                                  isKnown
+                                    ? 'bg-[#F2B33D]/10 border-[#F2B33D]/30 text-[#0F0F0F]'
+                                    : 'bg-[#F5F5F5]/60 border-[#F5F5F5] text-[#0F0F0F]'
+                                }`}
+                              >
+                                {!isKnown && <Sparkles className="h-3 w-3 text-[#F2B33D]" />}
+                                {c}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleCountry(c)}
+                                  className="ml-0.5 rounded-full p-0.5 hover:bg-black/5"
+                                  aria-label={`Retirer ${c}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* Champ de saisie libre */}
+                      <div className="relative mb-2">
+                        <input
+                          type="text"
+                          value={countryQuery}
+                          onChange={(e) => setCountryQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); addCountryFreeText() }
+                          }}
+                          placeholder="Ajouter un pays (ex : Cameroun, Maroc…)"
+                          className="w-full rounded-lg border border-[#F5F5F5] pl-3 pr-20 py-2 text-sm text-[#0F0F0F] outline-none focus:border-[#F2B33D] focus:ring-2 focus:ring-[#F2B33D]/20"
+                        />
+                        {countryQuery.trim() && (
+                          <button
+                            type="button"
+                            onClick={addCountryFreeText}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-[#F2B33D] px-2 py-1 text-xs font-semibold text-white hover:bg-[#F2B33D]/90"
+                          >
+                            Ajouter
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Suggestions cliquables */}
+                      {knownCountries.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 rounded-lg border border-[#F5F5F5] bg-white p-2 max-h-32 overflow-y-auto">
+                          {knownCountries
+                            .filter((c) => !selectedCountries.some((s) => s.toLowerCase() === c.toLowerCase()))
+                            .map((c) => (
                               <button
                                 key={c}
                                 type="button"
                                 onClick={() => toggleCountry(c)}
-                                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
-                                  checked
-                                    ? 'bg-[#F2B33D] border-[#F2B33D] text-white'
-                                    : 'bg-white border-[#F5F5F5] text-[#0F0F0F]/70 hover:bg-[#F4F8FB]'
-                                }`}
+                                className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border bg-white border-[#F5F5F5] text-[#0F0F0F]/70 hover:bg-[#F4F8FB]"
                               >
-                                {checked && <Check className="h-3 w-3" />}
+                                <Plus className="h-3 w-3" />
                                 {c}
                               </button>
-                            )
-                          })}
+                            ))}
                         </div>
                       )}
                       {selectedCountries.length > 0 && (
@@ -1132,34 +1223,81 @@ export default function BrandRequestsPage() {
                         </p>
                       )}
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium text-[#0F0F0F]/80 mb-1.5">
-                        Secteurs d'activité <span className="text-[#0F0F0F]/40 font-normal">(optionnel, multi-sélection)</span>
+                        Secteurs d'activité <span className="text-[#0F0F0F]/40 font-normal">(optionnel)</span>
                       </label>
-                      {knownSectors.length === 0 ? (
-                        <p className="text-xs text-[#0F0F0F]/50">
-                          Aucun secteur répertorié pour le moment.
-                        </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5 rounded-lg border border-[#F5F5F5] bg-white p-2 max-h-44 overflow-y-auto">
-                          {knownSectors.map((s) => {
-                            const checked = selectedSectors.some((x) => x.toLowerCase() === s.toLowerCase())
+
+                      {/* Chips des valeurs sélectionnées — inclut les saisies libres */}
+                      {selectedSectors.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                          {selectedSectors.map((s) => {
+                            const isKnown = knownSectors.some((k) => k.toLowerCase() === s.toLowerCase())
                             return (
+                              <span
+                                key={s}
+                                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border ${
+                                  isKnown
+                                    ? 'bg-[#F2B33D]/10 border-[#F2B33D]/30 text-[#0F0F0F]'
+                                    : 'bg-[#F5F5F5]/60 border-[#F5F5F5] text-[#0F0F0F]'
+                                }`}
+                              >
+                                {!isKnown && <Sparkles className="h-3 w-3 text-[#F2B33D]" />}
+                                {s}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleSector(s)}
+                                  className="ml-0.5 rounded-full p-0.5 hover:bg-black/5"
+                                  aria-label={`Retirer ${s}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* Champ de saisie libre */}
+                      <div className="relative mb-2">
+                        <input
+                          type="text"
+                          value={sectorQuery}
+                          onChange={(e) => setSectorQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); addSectorFreeText() }
+                          }}
+                          placeholder="Ajouter un secteur (ex : Agro-industrie, EdTech…)"
+                          className="w-full rounded-lg border border-[#F5F5F5] pl-3 pr-20 py-2 text-sm text-[#0F0F0F] outline-none focus:border-[#F2B33D] focus:ring-2 focus:ring-[#F2B33D]/20"
+                        />
+                        {sectorQuery.trim() && (
+                          <button
+                            type="button"
+                            onClick={addSectorFreeText}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-[#F2B33D] px-2 py-1 text-xs font-semibold text-white hover:bg-[#F2B33D]/90"
+                          >
+                            Ajouter
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Suggestions cliquables */}
+                      {knownSectors.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 rounded-lg border border-[#F5F5F5] bg-white p-2 max-h-32 overflow-y-auto">
+                          {knownSectors
+                            .filter((s) => !selectedSectors.some((x) => x.toLowerCase() === s.toLowerCase()))
+                            .map((s) => (
                               <button
                                 key={s}
                                 type="button"
                                 onClick={() => toggleSector(s)}
-                                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
-                                  checked
-                                    ? 'bg-[#F2B33D] border-[#F2B33D] text-white'
-                                    : 'bg-white border-[#F5F5F5] text-[#0F0F0F]/70 hover:bg-[#F4F8FB]'
-                                }`}
+                                className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border bg-white border-[#F5F5F5] text-[#0F0F0F]/70 hover:bg-[#F4F8FB]"
                               >
-                                {checked && <Check className="h-3 w-3" />}
+                                <Plus className="h-3 w-3" />
                                 {s}
                               </button>
-                            )
-                          })}
+                            ))}
                         </div>
                       )}
                       {selectedSectors.length > 0 && (
@@ -1180,7 +1318,7 @@ export default function BrandRequestsPage() {
                       onChange={(e) => setObjective(e.target.value)}
                       rows={2}
                       required
-                      placeholder="Que cherchez-vous à analyser ? (benchmark, veille concurrentielle, étude de campagne…)"
+                      placeholder="Que cherchez-vous à analyser ? (benchmark, étude de campagne, analyse de positionnement…)"
                       className="w-full rounded-lg border border-[#F5F5F5] px-3 py-2 text-sm text-[#0F0F0F] outline-none focus:border-[#F2B33D] focus:ring-2 focus:ring-[#F2B33D]/20 resize-none"
                     />
                   </div>

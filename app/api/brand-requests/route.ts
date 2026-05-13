@@ -187,35 +187,11 @@ export async function POST(request: NextRequest) {
     const objectiveClean =
       typeof objective === 'string' && objective.trim() ? objective.trim() : null
 
-    // Whitelist serveur : pays / secteurs doivent provenir des campagnes publiées
-    if (countriesRaw.length > 0 || sectorsRaw.length > 0) {
-      const [countriesRes, categoriesRes] = await Promise.all([
-        countriesRaw.length > 0
-          ? admin.from('campaigns').select('country').eq('status', 'Publié').not('country', 'is', null)
-          : Promise.resolve({ data: [] as any[] }),
-        sectorsRaw.length > 0
-          ? admin.from('campaigns').select('category').eq('status', 'Publié').not('category', 'is', null)
-          : Promise.resolve({ data: [] as any[] }),
-      ])
-      const allowedCountries = new Set(
-        ((countriesRes as any).data || [])
-          .map((r: any) => String(r.country || '').trim().toLowerCase())
-          .filter(Boolean)
-      )
-      const allowedSectors = new Set(
-        ((categoriesRes as any).data || [])
-          .map((r: any) => String(r.category || '').trim().toLowerCase())
-          .filter(Boolean)
-      )
-      const badCountry = countriesRaw.find((c) => !allowedCountries.has(c.toLowerCase()))
-      if (badCountry) {
-        return NextResponse.json({ error: `Pays invalide : ${badCountry}` }, { status: 400 })
-      }
-      const badSector = sectorsRaw.find((s) => !allowedSectors.has(s.toLowerCase()))
-      if (badSector) {
-        return NextResponse.json({ error: `Secteur invalide : ${badSector}` }, { status: 400 })
-      }
-    }
+    // Pays et secteurs : saisie libre acceptée — l'utilisateur peut suggérer des
+    // valeurs hors base. L'équipe LAVEIYE qualifie ensuite la demande côté admin.
+    // (Auparavant une whitelist depuis les campagnes publiées rejetait toute
+    // valeur inconnue ; supprimée pour autoriser les demandes sur des marchés
+    // ou secteurs pas encore référencés dans la plateforme.)
 
     if (!objectiveClean) {
       return NextResponse.json(

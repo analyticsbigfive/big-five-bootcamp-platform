@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Building2, Loader2, ArrowLeft, MessageSquare, GitMerge, CheckSquare, Square, Trash2, Copy, Check, Upload, FileText, CreditCard, ShieldCheck, X, Search, Users } from "lucide-react"
 import Link from "next/link"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { BrandRequestCampaignsManager } from "@/components/admin/brand-request-campaigns-manager"
 
 interface BrandRequest {
   id: string
@@ -817,6 +818,15 @@ export default function AdminBrandRequestsPage() {
                             )}
                           </div>
                         </div>
+
+                        {/* Gestion manuelle des campagnes rattachées à cette demande
+                            (remplace l'association automatique par marque / pays / secteurs). */}
+                        <BrandRequestCampaignsManager
+                          brandRequestId={req.id}
+                          brandName={req.brand_name}
+                          countries={req.brand_country ? [req.brand_country] : []}
+                          sectors={req.brand_sector ? [req.brand_sector] : []}
+                        />
 
                         <div className="flex flex-wrap gap-2 pt-1">
                           <Button size="sm" disabled={saving} className="bg-[#F2B33D] hover:bg-[#F2B33D]/90"

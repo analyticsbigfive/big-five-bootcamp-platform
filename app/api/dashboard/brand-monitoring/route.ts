@@ -9,9 +9,9 @@
  *
  * Logique :
  *   - 1 groupe par demande (= 1 sous-bloc par marque dans l'UI)
- *   - Filtres : marque + (pays ∈ ...) + (catégorie ∈ ...) + (platforms ∩ canaux)
- *   - Comparaisons sur pays/secteur tolérantes aux accents et à la casse,
- *     les codes de réseaux sociaux mappés vers les libellés campagnes.
+ *   - Les contenus sont issus de la table de liaison `brand_request_campaigns`
+ *     (rattachement manuel effectué par l'admin). Plus d'auto-association
+ *     par marque / pays / secteurs / plateformes.
  *   - Limite par groupe : `limit` query param (défaut 8)
  *   - Si l'utilisateur n'a aucune demande approuvée+payée, on renvoie groups: []
  */
@@ -23,32 +23,6 @@ export const dynamic = 'force-dynamic'
 
 const DEFAULT_LIMIT = 8
 const MAX_LIMIT = 24
-
-// brand_requests.social_networks stocke des codes lowercase (facebook, x, ...)
-// alors que campaigns.platforms stocke des labels TitleCase (Facebook, Twitter/X, ...).
-// L'opérateur && (overlaps) PostgreSQL est sensible à la casse, on doit donc
-// mapper les codes vers TOUS les libellés possibles côté campaigns avant le filtre.
-const CHANNEL_TO_CAMPAIGN_PLATFORMS: Record<string, string[]> = {
-  facebook:  ['Facebook'],
-  instagram: ['Instagram'],
-  linkedin:  ['LinkedIn'],
-  tiktok:    ['TikTok'],
-  // 'x' (anciennement Twitter) — on accepte les libellés historiques présents en base
-  x:         ['Twitter/X', 'X', 'Twitter'],
-  youtube:   ['YouTube'],
-}
-
-// Normalisation tolérante (trim + lowercase + suppression des accents) pour
-// comparer pays/secteurs entre brand_requests et campaigns sans rater les
-// "Côte d'Ivoire" vs "Cote d'Ivoire" ou "Télécoms" vs "Telecoms".
-function fold(s: string | null | undefined): string {
-  if (!s) return ''
-  return s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .trim()
-    .toLowerCase()
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -93,8 +67,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ groups: [] })
     }
 
-    // 2. Pour chaque demande, on récupère ses contenus correspondants.
-    //    On parallélise les requêtes (une par groupe).
+    // 2. Pour chaque demande, on récupère les campagnes manuellement rattachées
+    //    par l'admin via la table de liaison `brand_request_campaigns`.
     const groups = await Promise.all(
       requests.map(async (r: any) => {
         const countries: string[] =
@@ -113,41 +87,28 @@ export async function GET(request: NextRequest) {
           ? r.social_networks
           : []
 
-        // Mapping codes → libellés campagne pour le filtre &&.
-        const platformLabels = channels.flatMap(
-          (c) => CHANNEL_TO_CAMPAIGN_PLATFORMS[String(c).toLowerCase()] || []
-        )
+        const { data: links, error: linksErr } = await admin
+          .from('brand_request_campaigns')
+          .select('campaign_id, added_at')
+          .eq('brand_request_id', r.id)
+          .order('added_at', { ascending: false })
+          .limit(perGroupLimit)
 
-        // 1er passage SQL : marque + canaux. Les filtres pays/secteurs sont
-        // appliqués en JS (fold) pour gérer les variations d'accents/casse.
-        let q = admin
-          .from('campaigns')
-          .select('*')
-          .ilike('brand', r.brand_name)
-          .eq('status', 'Publié')
-
-        if (platformLabels.length > 0) q = q.overlaps('platforms', platformLabels)
-
-        const { data: rawContents, error: campErr } = await q
-          .order('created_at', { ascending: false })
-          .limit(perGroupLimit * 4) // marge pour le filtrage JS pays/secteurs
-
-        if (campErr) {
-          console.error('[brand-monitoring] campaigns query failed:', campErr)
+        if (linksErr) {
+          console.error('[brand-monitoring] links query failed:', linksErr)
         }
 
-        const foldedCountries = countries.map(fold).filter(Boolean)
-        const foldedSectors = sectors.map(fold).filter(Boolean)
-
-        const filtered = (rawContents || []).filter((c: any) => {
-          if (foldedCountries.length > 0) {
-            if (!foldedCountries.includes(fold(c.country))) return false
-          }
-          if (foldedSectors.length > 0) {
-            if (!foldedSectors.includes(fold(c.category))) return false
-          }
-          return true
-        })
+        const ids = (links || []).map((l: any) => l.campaign_id)
+        let contents: any[] = []
+        if (ids.length > 0) {
+          const { data: campaigns } = await admin
+            .from('campaigns')
+            .select('*')
+            .in('id', ids)
+            .eq('status', 'Publié')
+          const byId = new Map((campaigns || []).map((c: any) => [c.id, c]))
+          contents = ids.map((cid) => byId.get(cid)).filter(Boolean)
+        }
 
         return {
           requestId: r.id,
@@ -157,13 +118,12 @@ export async function GET(request: NextRequest) {
           channels,
           nextRenewalAt: r.next_renewal_at || null,
           autoRenew: r.auto_renew ?? null,
-          contents: filtered.slice(0, perGroupLimit),
+          contents,
           ...(debug
             ? {
                 _debug: {
-                  rawCount: rawContents?.length ?? 0,
-                  filteredCount: filtered.length,
-                  platformLabels,
+                  linkedCount: ids.length,
+                  resolvedCount: contents.length,
                   countries,
                   sectors,
                   channels,
