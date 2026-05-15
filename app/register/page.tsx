@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { LegalModal } from "@/components/legal-modal"
+import { createClient } from "@/lib/supabase"
 
 function formatNumber(n: number): string {
   if (n >= 1000) {
@@ -23,7 +24,18 @@ function formatNumber(n: number): string {
 export default function RegisterPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirect') || ''
+  const planParam = searchParams.get('plan')
+  const billingParam = searchParams.get('billing')
+  const redirectTo = searchParams.get('redirect')
+    || (planParam ? `/subscribe?plan=${planParam}${billingParam === 'annual' ? '&billing=annual' : ''}` : '')
+
+  useEffect(() => {
+    try {
+      if (planParam) window.localStorage.setItem('laveiye:selectedPlan', planParam)
+      if (billingParam) window.localStorage.setItem('laveiye:selectedBilling', billingParam)
+    } catch {}
+  }, [planParam, billingParam])
+
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
@@ -33,13 +45,51 @@ export default function RegisterPage() {
   const [website, setWebsite] = useState("")
   const [formStartedAt] = useState(() => Date.now())
   const [stats, setStats] = useState({ users: 0, campaigns: 0, brands: 0, countries: 0 })
+  const [avatars, setAvatars] = useState<{ url: string; name: string }[]>([])
+  const [signupSent, setSignupSent] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
 
   useEffect(() => {
     fetch("/api/stats")
       .then((res) => res.json())
       .then((data) => setStats(data))
       .catch(() => setStats({ users: 0, campaigns: 0, brands: 0, countries: 0 }))
+
+    fetch("/api/avatars?limit=4")
+      .then((res) => res.json())
+      .then((data) => setAvatars(data.avatars || []))
+      .catch(() => setAvatars([]))
   }, [])
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast.error("Saisis ton email d'abord")
+      return
+    }
+    setResendLoading(true)
+    try {
+      const supabase = createClient()
+      const next = redirectTo || '/dashboard'
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        },
+      })
+      if (error) {
+        toast.error("Impossible d'envoyer l'email", { description: error.message })
+        return
+      }
+      toast.success("Email de vérification renvoyé", {
+        description: "Pense à vérifier aussi tes spams.",
+      })
+    } catch (err: any) {
+      toast.error("Une erreur est survenue", { description: err?.message })
+    } finally {
+      setResendLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,6 +125,8 @@ export default function RegisterPage() {
             ". Clique sur le lien pour activer ton compte (vérifie aussi les spams).",
           duration: 10000,
         })
+        setSignupSent(true)
+        return
       } else {
         toast.success("Compte créé avec succès !", {
           description: "Tu peux maintenant te connecter.",
@@ -96,6 +148,47 @@ export default function RegisterPage() {
     "Outils de recherche et filtres avancés",
     "Abonnement mensuel sans engagement"
   ]
+
+  if (signupSent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#F5F5F5] via-white to-white p-4">
+        <div className="max-w-md w-full rounded-2xl border-2 bg-white p-8 shadow-xl">
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F2B33D]/15">
+              <Mail className="h-8 w-8 text-[#F2B33D]" />
+            </div>
+            <h1 className="font-[family-name:var(--font-heading)] text-2xl font-bold text-[#0F0F0F]">
+              Vérifie ton email
+            </h1>
+            <p className="mt-3 text-sm text-[#0F0F0F]/70">
+              Un email de confirmation a été envoyé à{" "}
+              <span className="font-semibold text-[#0F0F0F]">{email}</span>.
+              Clique sur le lien pour activer ton compte.
+            </p>
+            <p className="mt-2 text-xs text-[#0F0F0F]/60">
+              Vérifie aussi tes spams. Le lien est valable 1 heure.
+            </p>
+          </div>
+          <div className="mt-6 space-y-2">
+            <Button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resendLoading}
+              className="w-full h-11"
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              {resendLoading ? "Envoi…" : "Renvoyer l'email de vérification"}
+            </Button>
+            <Button asChild variant="outline" className="w-full h-11">
+              <Link href={`/login${redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ""}`}>
+                Aller à la connexion
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -129,16 +222,19 @@ export default function RegisterPage() {
               </ul>
 
               <div className="mt-12 flex items-center gap-4">
-                <div className="flex -space-x-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[#F5F5F5] text-xs font-medium text-[#0F0F0F]"
-                    >
-                      {["AB", "CD", "EF", "GH"][i - 1]}
-                    </div>
-                  ))}
-                </div>
+                {avatars.length > 0 && (
+                  <div className="flex -space-x-3">
+                    {avatars.map((a, i) => (
+                      <img
+                        key={i}
+                        src={a.url}
+                        alt={a.name || `Membre ${i + 1}`}
+                        className="h-10 w-10 rounded-full border-2 border-white object-cover bg-[#F5F5F5]"
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                )}
                 <div className="text-sm text-[#0F0F0F]/80">
                   <span className="font-semibold text-[#0F0F0F]">{stats.users > 0 ? `+${formatNumber(stats.users)}` : '...'}</span> marketeurs actifs
                 </div>

@@ -11,7 +11,7 @@ export interface UserProfile {
   email: string
   name: string
   role: string
-  plan: string
+  plan: string | null
   status: string
   subscription_status: string | null
   subscription_end_date: string | null
@@ -106,12 +106,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserProfile(newProfile as UserProfile)
         }
       } else if (!error && data) {
-        // Vérifier si l'abonnement payant est expiré
-        const isPaid = ["basic", "pro"].includes(
+        // Fail-safe expiration : si subscription_end_date est dans le passé,
+        // on bascule l'utilisateur en état verrouillé côté client — quel que
+        // soit le plan (Discovery, Basic, Pro). Évite la fenêtre entre la
+        // date de fin et l'exécution du cron.
+        const hasPaidPlan = ["discovery", "basic", "pro"].includes(
           data.plan?.toLowerCase() || ""
         )
         if (
-          isPaid &&
+          hasPaidPlan &&
           data.subscription_end_date &&
           new Date(data.subscription_end_date) < new Date()
         ) {
@@ -119,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // L'utilisateur sera redirigé vers /subscribe par use-require-active-subscription.
           setUserProfile({ ...data, plan: null, subscription_status: "expired" } as UserProfile)
           // Synchroniser la DB côté serveur, puis re-fetch pour refléter l'état officiel.
-          fetch("/api/cron/check-subscriptions")
+          fetch("/api/subscription/expire-self", { method: "POST" })
             .then(async () => {
               try {
                 const { data: refreshed } = await supabase

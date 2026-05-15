@@ -69,9 +69,22 @@ async function activatePremiumForPayment(payment: any, explicitOverride?: string
   }
 }
 
-// Vérifier un paiement par téléphone ou email
+// Vérifier un paiement par téléphone ou email (admin uniquement)
 export async function GET(request: NextRequest) {
   try {
+    // Garde admin : empêche l'exposition publique de paiements (PII).
+    const { getSupabaseServer } = await import('@/lib/supabase-server');
+    const supabaseServer = await getSupabaseServer();
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+    const { ADMIN_EMAILS } = await import('@/lib/admin-auth');
+    const isAdmin = user.user_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Accès réservé aux administrateurs' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const phone = searchParams.get('phone');
     const email = searchParams.get('email');
@@ -136,6 +149,32 @@ export async function GET(request: NextRequest) {
 // Créer ou mettre à jour un paiement manuellement (admin seulement)
 export async function POST(request: NextRequest) {
   try {
+    // Garde admin : session Supabase + rôle 'admin' (ou email whitelist).
+    // Permet aussi un appel serveur->serveur via header X-Admin-Secret.
+    const adminSecret = process.env.ADMIN_PAYMENT_CHECK_SECRET;
+    const providedSecret = request.headers.get('x-admin-secret');
+    const secretOk = !!adminSecret && providedSecret === adminSecret;
+
+    if (!secretOk) {
+      const { getSupabaseServer } = await import('@/lib/supabase-server');
+      const supabaseServer = await getSupabaseServer();
+      const { data: { user } } = await supabaseServer.auth.getUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+      }
+      const adminEmails = [
+        'jeanluc@bigfiveabidjan.com',
+        'cossi@bigfiveabidjan.com',
+        'yannick@bigfiveabidjan.com',
+        'franck@bigfiveabidjan.com',
+        'stephanie@bigfiveabidjan.com',
+      ];
+      const isAdmin = user.user_metadata?.role === 'admin' || adminEmails.includes(user.email || '');
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Accès réservé aux administrateurs' }, { status: 403 });
+      }
+    }
+
     const body = await request.json();
     const { ref_command, phone, status, amount, payment_method, item_name, user_id, plan: planOverride } = body;
 

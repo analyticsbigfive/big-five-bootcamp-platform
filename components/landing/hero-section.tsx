@@ -132,7 +132,7 @@ export function HeroSection() {
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row animate-fade-in-up delay-300 w-full sm:w-auto">
               <Button size="lg" asChild className="group h-14 px-8 text-base font-bold bg-[#F2B33D] hover:bg-[#F2B33D]/90 text-white shadow-xl shadow-[#F2B33D]/20 transition-all duration-300 hover:scale-[1.02]">
-                <Link href="/register">
+                <Link href="/pricing">
                   {t.cta.primary}
                   <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
@@ -399,7 +399,7 @@ export function PricingTeaser() {
  <br/>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button size="lg" className="h-14 px-8 text-lg bg-[#F2B33D] hover:bg-[#F2B33D]/90 text-white font-bold rounded-full shadow-lg shadow-[#F2B33D]/25 hover:shadow-[#F2B33D]/40 transition-all hover:-translate-y-1" asChild>
-            <Link href="/register">
+            <Link href="/pricing">
               {t.cta.primary}
             </Link>
           </Button>

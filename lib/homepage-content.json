@@ -8,7 +8,7 @@
     },
     "subtitle": "Accédez à la plus grande bibliothèque de campagnes marketing réelles en Afrique. Analysez, benchmarkez et créez des concepts gagnants en quelques minutes.",
     "cta": {
-      "primary": " Accéder à la plateforme",
+      "primary": "Accéder à la plateforme",
       "secondary": "Voir la démo"
     },
     "price": {
@@ -76,7 +76,7 @@
     "title": "Commencez à créer des campagnes impactantes.",
     "subtitle": "Rejoignez des centaines de professionnels qui utilisent Laveiye pour élever leur niveau de performance.",
     "cta": {
-      "primary": " Accéder à la plateforme",
+      "primary": "Accéder à la plateforme",
       "secondary": "Voir les tarifs"
     }
   },
@@ -107,7 +107,7 @@
         "annualPrice": 10000,
         "discount_label": "2 mois offerts",
         "cta": "Choisir Découverte",
-        "ctaLink": "/subscribe?plan=discovery",
+        "ctaLink": "/register?plan=discovery",
         "ctaVariant": "outline",
         "highlighted": false,
         "badge": null,
@@ -133,7 +133,7 @@
         "monthlyPrice": 4900,
         "annualPrice": 49000,
         "cta": "Choisir Basic",
-        "ctaLink": "/subscribe?plan=basic",
+        "ctaLink": "/register?plan=basic",
         "ctaVariant": "default",
         "highlighted": true,
         "badge": "Populaire",
@@ -159,7 +159,7 @@
         "monthlyPrice": 9900,
         "annualPrice": 99000,
         "cta": "Choisir Pro",
-        "ctaLink": "/subscribe?plan=pro",
+        "ctaLink": "/register?plan=pro",
         "ctaVariant": "default",
         "highlighted": false,
         "badge": null,

@@ -1,18 +1,19 @@
 /**
  * API Route: POST /api/payment/subscribe
  *
- * Cree une demande de paiement PawaPay pour un abonnement
- * Supporte Basic (4 900 XOF) et Pro (9 900 XOF)
- * Supporte le renouvellement anticipe : les jours restants sont conserves
+ * Cree une demande de paiement PawaPay pour un abonnement.
+ * Plans supportés : Découverte (1 000 XOF), Basic (4 900 XOF), Pro (9 900 XOF).
+ * Supporte le renouvellement anticipé : les jours restants sont conservés.
  *
  * Body:
  * - userEmail    : Email de l'utilisateur
- * - userName?   : Nom de l'utilisateur
- * - plan        : "basic" | "pro"
- * - billing     : "monthly" | "annual"
- * - phoneNumber : MSISDN du client (ex. "2250707123456")
- * - provider    : Code provider PawaPay (ex. "ORANGE_CIV", "MTN_MOMO_CIV", "MOOV_CIV" — Wave non supporté)
- * - currency?   : Devise (defaut "XOF")
+ * - userName?    : Nom de l'utilisateur
+ * - plan         : "discovery" | "basic" | "pro"
+ * - billing      : "monthly" | "annual"
+ * - phoneNumber  : MSISDN du client (ex. "2250707123456")
+ * - provider     : Code provider PawaPay (ex. "ORANGE_CIV", "MTN_MOMO_CIV", "MOOV_CIV" — Wave non supporté)
+ * - currency?    : Devise (defaut "XOF")
+ * - promoCode?   : Code promo (ex. KEYNOTE)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -29,6 +30,7 @@ import {
   isPromoCodeFormatValid,
   normalizePromoCode,
 } from '@/lib/promo-codes';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 const PLAN_PRICES: Record<string, { price: number; annualPrice: number; label: string; dbKey: string }> = {
   discovery: { price: 1000, annualPrice: 10000, label: 'Découverte', dbKey: 'Discovery' },
@@ -64,6 +66,16 @@ function planRank(dbKeyOrSlug: string | null | undefined): number {
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth obligatoire : l'utilisateur doit être connecté et ne peut souscrire
+    // que pour son propre compte. Empêche un attaquant d'initier un paiement
+    // pour un autre email ou de consommer un code promo unique au nom d'autrui.
+    const { getSupabaseServer } = await import('@/lib/supabase-server');
+    const supabaseServer = await getSupabaseServer();
+    const { data: { user: authUser } } = await supabaseServer.auth.getUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentification requise' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { userEmail, userName, plan, billing, phoneNumber, provider, currency = 'XOF', promoCode } = body;
 
@@ -71,6 +83,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'User email is required' },
         { status: 400 }
+      );
+    }
+
+    // Le userEmail soumis doit correspondre à la session — pas de souscription
+    // pour un compte tiers.
+    if ((userEmail || '').toLowerCase().trim() !== (authUser.email || '').toLowerCase().trim()) {
+      return NextResponse.json(
+        { error: "Email ne correspond pas à la session authentifiée." },
+        { status: 403 }
       );
     }
 
@@ -102,6 +123,16 @@ export async function POST(request: NextRequest) {
     const normalizedPromo = normalizePromoCode(promoCode);
 
     if (normalizedPromo) {
+      // Rate-limit : 5 tentatives / 5 min par (IP + email) pour bloquer le
+      // brute-force sur les codes promo.
+      const ip = getClientIp(request);
+      const rl = rateLimit(`promo:${ip}:${(userEmail || '').toLowerCase()}`, 5, 5 * 60_000);
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
+          { status: 429 }
+        );
+      }
       if (!isPromoCodeFormatValid(normalizedPromo)) {
         return NextResponse.json(
           { error: 'Code promo invalide (format attendu : LAVEIYE-XXXX)' },

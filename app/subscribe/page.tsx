@@ -102,13 +102,21 @@ export default function SubscribePage() {
   // et masque le bouton "Retour au dashboard" tant qu'aucun plan n'est choisi.
   const planRequired = searchParams.get("required") === "1"
   // Par defaut : Basic (jamais Pro). Pro reste un choix explicite de l'utilisateur.
-  const rawPlanParam = searchParams.get("plan") || "basic"
+  // Fallback : si l'URL n'a pas ?plan=, on lit le choix conservé en localStorage
+  // (posé avant un detour /register ou /login depuis /pricing).
+  const storedPlan = typeof window !== 'undefined'
+    ? window.localStorage.getItem('laveiye:selectedPlan')
+    : null
+  const storedBilling = typeof window !== 'undefined'
+    ? window.localStorage.getItem('laveiye:selectedBilling')
+    : null
+  const rawPlanParam = searchParams.get("plan") || storedPlan || "basic"
   const validPlan: PlanChoice = ["basic", "pro", "discovery"].includes(rawPlanParam)
     ? (rawPlanParam as PlanChoice)
     : "basic"
   const [selectedPlan, setSelectedPlan] = useState<PlanChoice>(validPlan)
   const [isAnnual, setIsAnnual] = useState(
-    searchParams.get("billing") === "annual"
+    (searchParams.get("billing") || storedBilling) === "annual"
   )
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -152,11 +160,17 @@ export default function SubscribePage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      // Préserver le plan/billing sélectionnés dans l'URL après login,
-      // sinon l'utilisateur retombe sur le plan par défaut (Pro) au retour.
+      // Préserver le plan/billing sélectionnés dans l'URL ET dans localStorage
+      // pour qu'ils survivent au flux d'inscription (incl. confirmation email).
       const qs = searchParams.toString()
       const redirect = qs ? `/subscribe?${qs}` : '/subscribe'
-      router.push(`/login?redirect=${encodeURIComponent(redirect)}`)
+      try {
+        const plan = searchParams.get('plan')
+        if (plan) window.localStorage.setItem('laveiye:selectedPlan', plan)
+        const billing = searchParams.get('billing')
+        if (billing) window.localStorage.setItem('laveiye:selectedBilling', billing)
+      } catch {}
+      router.push(`/register?redirect=${encodeURIComponent(redirect)}`)
     }
   }, [user, loading, router, searchParams])
 

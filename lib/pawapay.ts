@@ -78,7 +78,17 @@ export const PAWAPAY_ALLOWED_IPS = {
  * (utile en local et pour tester).
  */
 export function isAllowedPawaPayIP(request: Request): boolean {
-  if (process.env.PAWAPAY_VERIFY_IP !== 'true') return true
+  const isProd = process.env.NODE_ENV === 'production'
+  const verifyFlag = process.env.PAWAPAY_VERIFY_IP === 'true'
+
+  // En production, la vérification IP est obligatoire (sauf opt-out explicite
+  // via PAWAPAY_DISABLE_IP_CHECK=true pour debug ponctuel). En dev/test, on
+  // ne vérifie que si PAWAPAY_VERIFY_IP=true.
+  const shouldVerify = isProd
+    ? process.env.PAWAPAY_DISABLE_IP_CHECK !== 'true'
+    : verifyFlag
+
+  if (!shouldVerify) return true
 
   const forwarded = request.headers.get('x-forwarded-for') || ''
   const ip = forwarded.split(',')[0]?.trim() || ''

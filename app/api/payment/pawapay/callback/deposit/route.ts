@@ -27,12 +27,13 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Vérification IP (optionnelle, activée via PAWAPAY_VERIFY_IP=true)
+    // 1. Vérification IP (obligatoire en production, cf. isAllowedPawaPayIP).
+    // On renvoie 401 — PawaPay réessaiera depuis la bonne IP si problème
+    // réseau, mais un acteur tiers sera bloqué.
     if (!isAllowedPawaPayIP(request)) {
-      console.warn('⚠️ PawaPay deposit callback reçu depuis une IP non autorisée')
-      // On renvoie quand même 200 pour éviter une boucle de retry côté PawaPay,
-      // mais on n'agit pas sur la donnée.
-      return new NextResponse('IP not allowed', { status: 200 })
+      const ip = request.headers.get('x-forwarded-for') || 'unknown'
+      console.warn(`⚠️ PawaPay deposit callback IP refusée: ${ip}`)
+      return new NextResponse('Unauthorized source', { status: 401 })
     }
 
     const payload = (await request.json()) as PawaPayDepositCallback

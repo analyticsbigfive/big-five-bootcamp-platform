@@ -19,12 +19,16 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Vérification de sécurité : CRON_SECRET ou Authorization header
+    // Vérification de sécurité : CRON_SECRET obligatoire.
+    // Refuse l'appel si la variable d'env est absente (évite un endpoint
+    // publiquement déclenchable en cas de mauvaise config Vercel).
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    
-    // En production, vérifier le secret (Vercel Cron envoie le header automatiquement)
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret) {
+      console.error('[cron/check-subscriptions] CRON_SECRET non configuré');
+      return NextResponse.json({ error: 'Server misconfigured' }, { status: 503 });
+    }
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -106,18 +110,26 @@ export async function GET(request: NextRequest) {
         .gte('subscription_end_date', now)
         .lte('subscription_end_date', sevenDays)
 
-      for (const u of (expiringUsers || [])) {
-        // Idempotence : ignorer si une notif a deja ete envoyee pour cette
-        // date de fin specifique.
-        const { data: alreadySent } = await (supabaseAdmin as any)
+      // Idempotence batchée : récupère en une requête toutes les notifs
+      // 'subscription_expiring' déjà envoyées pour les utilisateurs ciblés,
+      // puis filtre côté serveur sur (user_id, metadata.subscription_end_date).
+      // Évite un N+1 sur la table notifications lors du cron.
+      const expiringUserIds = (expiringUsers || []).map((u: any) => u.id)
+      const sentKeys = new Set<string>()
+      if (expiringUserIds.length > 0) {
+        const { data: sentNotifs } = await (supabaseAdmin as any)
           .from('notifications')
-          .select('id')
-          .eq('user_id', u.id)
+          .select('user_id, metadata')
           .eq('type', 'subscription_expiring')
-          .contains('metadata', { subscription_end_date: u.subscription_end_date })
-          .limit(1)
-          .maybeSingle()
-        if (alreadySent) continue
+          .in('user_id', expiringUserIds)
+        for (const n of (sentNotifs || [])) {
+          const end = n?.metadata?.subscription_end_date
+          if (end) sentKeys.add(`${n.user_id}|${end}`)
+        }
+      }
+
+      for (const u of (expiringUsers || [])) {
+        if (sentKeys.has(`${u.id}|${u.subscription_end_date}`)) continue
 
         const endDate = new Date(u.subscription_end_date)
         const daysLeft = Math.max(

@@ -57,9 +57,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    // Vérifier le rôle admin
-    const adminEmails = ['jeanluc@bigfiveabidjan.com', 'cossi@bigfiveabidjan.com', 'yannick@bigfiveabidjan.com', 'franck@bigfiveabidjan.com', 'stephanie@bigfiveabidjan.com']
-    const isAdmin = user.user_metadata?.role === 'admin' || adminEmails.includes(user.email || '')
+    // Vérifier le rôle admin (liste centralisée dans lib/admin-auth)
+    const { ADMIN_EMAILS } = await import('@/lib/admin-auth')
+    const isAdmin = user.user_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase())
 
     if (!isAdmin) {
       return NextResponse.json({ error: 'Accès réservé aux administrateurs' }, { status: 403 })

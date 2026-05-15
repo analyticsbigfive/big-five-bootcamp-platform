@@ -22,7 +22,17 @@ function formatNumber(n: number): string {
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const planParam = searchParams.get('plan')
+  const billingParam = searchParams.get('billing')
+  const redirectTo = searchParams.get('redirect')
+    || (planParam ? `/subscribe?plan=${planParam}${billingParam === 'annual' ? '&billing=annual' : ''}` : '/dashboard')
+
+  useEffect(() => {
+    try {
+      if (planParam) window.localStorage.setItem('laveiye:selectedPlan', planParam)
+      if (billingParam) window.localStorage.setItem('laveiye:selectedBilling', billingParam)
+    } catch {}
+  }, [planParam, billingParam])
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState("")
