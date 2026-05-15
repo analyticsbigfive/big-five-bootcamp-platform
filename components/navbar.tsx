@@ -11,6 +11,13 @@ type PlanLabel = "Découverte" | "Basic" | "Pro"
 
 function PlanBadge({ plan }: { plan: string }) {
   const normalized = (plan || "").toLowerCase()
+
+  // Aucun badge tant qu'aucun plan payant n'a été choisi.
+  // Discovery / Basic / Pro sont les SEULS plans affichés.
+  if (normalized !== "discovery" && normalized !== "basic" && normalized !== "pro") {
+    return null
+  }
+
   const label: PlanLabel =
     normalized === "pro" ? "Pro" : normalized === "basic" ? "Basic" : "Découverte"
 

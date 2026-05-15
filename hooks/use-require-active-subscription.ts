@@ -22,21 +22,36 @@ import { isLockedAccount } from "@/lib/pricing"
 
 const SUBSCRIBE_PATH = "/subscribe"
 
-export function useRequireActiveSubscription() {
+/**
+ * Renvoie un état permettant à la page appelante de :
+ *   - bloquer le rendu pendant que la vérif est en cours (`checking`) ou que le
+ *     redirect est en route (`locked`) — sinon le dashboard "flashe" avant le replace().
+ *   - rendre librement quand `allowed` est true.
+ */
+export function useRequireActiveSubscription(): {
+  checking: boolean
+  locked: boolean
+  allowed: boolean
+} {
   const router = useRouter()
   const pathname = usePathname()
   const { user, userProfile, loading } = useAuthContext()
 
-  useEffect(() => {
-    if (loading) return
-    if (!user) return
-    if (!userProfile) return
-    if (pathname?.startsWith(SUBSCRIBE_PATH)) return
+  const onSubscribePath = !!pathname?.startsWith(SUBSCRIBE_PATH)
+  // Profil chargé = on connaît plan/status. Sinon on attend.
+  const profileReady = !loading && (!user || userProfile !== null)
+  const plan = (userProfile as any)?.plan as string | null | undefined
+  const status = (userProfile as any)?.subscription_status as string | null | undefined
+  const locked = profileReady && !!user && isLockedAccount(plan, status) && !onSubscribePath
 
-    const plan = (userProfile as any).plan as string | null | undefined
-    const status = (userProfile as any).subscription_status as string | null | undefined
-    if (isLockedAccount(plan, status)) {
-      router.replace(`${SUBSCRIBE_PATH}?required=1`)
-    }
-  }, [loading, user, userProfile, pathname, router])
+  useEffect(() => {
+    if (!locked) return
+    router.replace(`${SUBSCRIBE_PATH}?required=1`)
+  }, [locked, router])
+
+  return {
+    checking: !profileReady,
+    locked,
+    allowed: profileReady && (!user || onSubscribePath || !isLockedAccount(plan, status)),
+  }
 }

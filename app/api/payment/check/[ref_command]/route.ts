@@ -138,9 +138,10 @@ export async function POST(
         // Plan strict — pas de fallback silencieux vers Pro.
         // Le plan doit etre present dans metadata (genere par /api/payment/subscribe).
         const rawPlan = String(paymentData.metadata.plan || '').toLowerCase().trim();
-        let planName: 'Basic' | 'Pro' | null = null;
+        let planName: 'Discovery' | 'Basic' | 'Pro' | null = null;
         if (rawPlan === 'basic') planName = 'Basic';
         else if (rawPlan === 'pro') planName = 'Pro';
+        else if (rawPlan === 'discovery' || rawPlan === 'free') planName = 'Discovery';
 
         if (!planName) {
           console.error(

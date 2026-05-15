@@ -4,6 +4,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft, ArrowRight, Calendar, CheckCircle2, Sparkles } from "lucide-react"
 import { DashboardNavbar } from "@/components/dashboard/dashboard-navbar"
+import { SubscriptionGuard } from "@/components/subscription-guard"
 import { Button } from "@/components/ui/button"
 import { getTempsFortStatus, getTodayISO } from "@/lib/temps-forts"
 import { fetchAllTempsForts, fetchTempsFortBySlug, fetchCampaignsByTempsFortSlug } from "@/lib/temps-forts-server"
@@ -48,6 +49,7 @@ export default async function TempsFortDetailPage({ params }: TempsFortDetailPag
     .slice(0, 3)
 
   return (
+    <SubscriptionGuard>
     <div className="min-h-screen bg-gradient-to-br from-white via-white to-[#F5F5F5]/40">
       <DashboardNavbar />
 
@@ -168,6 +170,7 @@ export default async function TempsFortDetailPage({ params }: TempsFortDetailPag
         )}
       </main>
     </div>
+    </SubscriptionGuard>
   )
 }
 

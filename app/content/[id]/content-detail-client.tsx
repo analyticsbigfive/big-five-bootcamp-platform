@@ -110,7 +110,7 @@ function formatDescription(text: string): string {
 export default function ContentDetailClient({ id }: { id: string }) {
   // Force le choix d'un plan : redirige vers /subscribe?required=1
   // si l'utilisateur n'a pas d'abonnement actif.
-  useRequireActiveSubscription();
+  const { checking: subChecking, locked: subLocked } = useRequireActiveSubscription();
 
   const [content, setContent] = useState<Campaign | null>(null);
   const [relatedContent, setRelatedContent] = useState<Campaign[]>([]);
@@ -801,6 +801,20 @@ export default function ContentDetailClient({ id }: { id: string }) {
         </main>
       </div>
     );
+  }
+
+  // Garde abonnement : pas d'accès au détail tant que l'utilisateur n'a pas de plan actif.
+  if (subChecking || subLocked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#F2B33D] border-t-transparent" />
+          <p className="text-sm text-muted-foreground">
+            {subLocked ? "On prépare votre accès Laveiye…" : "Chargement…"}
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

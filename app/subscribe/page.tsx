@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select"
 import { useSupabaseAuth } from "@/hooks/use-supabase-auth"
 import { LegalModal } from "@/components/legal-modal"
+import { SubscribeCampaignsCarousel } from "@/components/subscribe-campaigns-carousel"
 import { getOperatorLogo } from "@/lib/operator-logos"
 import {
   PAWAPAY_COUNTRIES,
@@ -353,8 +354,8 @@ export default function SubscribePage() {
           {planRequired ? (
             // Mode "choix obligatoire" : pas de retour possible.
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#a17320]">
-              <Lock className="h-4 w-4" />
-              Choix de plan requis
+              <Sparkles className="h-4 w-4" />
+              Activez votre accès Laveiye
             </span>
           ) : (
             <Link
@@ -372,7 +373,7 @@ export default function SubscribePage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mx-auto max-w-6xl px-4 py-8">
         {planRequired && (
           <div className="mb-6 rounded-2xl border-2 border-[#F2B33D]/40 bg-gradient-to-r from-[#FFFBEC] to-white p-4 sm:p-5">
             <div className="flex items-start gap-3">
@@ -381,22 +382,26 @@ export default function SubscribePage() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-[#0F0F0F]">
-                  Choisissez un plan pour accéder à Laveiye
+                  Débloquez toute la créativité africaine
                 </p>
                 <p className="mt-1 text-sm text-[#0F0F0F]/70">
-                  L'accès au tableau de bord requiert un abonnement actif :
-                  Découverte, Basic ou Pro.
+                  Choisissez votre formule pour explorer les campagnes,
+                  enregistrer vos favoris et suivre les temps forts du marché.
                 </p>
               </div>
             </div>
           </div>
         )}
-        <h1 className="text-center font-[family-name:var(--font-heading)] text-2xl font-bold text-[#0F0F0F]">
+        {/* Layout 2 colonnes : formules à gauche, carrousel vendeur (visuel + perks) à droite (sticky). */}
+        <div className="mt-6 grid gap-8 md:grid-cols-[1.15fr_1fr] md:items-start">
+          {/* === COLONNE GAUCHE : Choix des formules === */}
+          <div>
+        <h1 className="text-center md:text-left font-[family-name:var(--font-heading)] text-2xl font-bold text-[#0F0F0F]">
           {isActive
             ? "Prolonger ou changer de formule"
             : "Choisissez votre formule"}
         </h1>
-        <p className="mt-2 text-center text-[#0F0F0F]/60">
+        <p className="mt-2 text-center md:text-left text-[#0F0F0F]/60">
           {isActive
             ? `${isAnnual ? '365' : '30'} jours supplémentaires seront ajoutés à votre abonnement`
             : "Débloquez l'accès complet à Laveiye"}
@@ -463,13 +468,13 @@ export default function SubscribePage() {
         </div>
 
         {/* Plan Selection Cards */}
-        <div className="mt-6 grid grid-cols-2 gap-4">
+        <div className="mt-6 grid gap-4 grid-cols-1">
           {/* Découverte Card */}
           <button
             type="button"
             disabled={isPlanLocked("discovery")}
             onClick={() => setSelectedPlan("discovery")}
-            className={`rounded-xl border-2 p-5 text-left transition-all col-span-2 ${
+            className={`rounded-xl border-2 p-5 text-left transition-all ${
               isPlanLocked("discovery")
                 ? "border-[#F5F5F5] bg-[#F5F5F5]/40 opacity-60 cursor-not-allowed"
                 : selectedPlan === "discovery"
@@ -634,6 +639,12 @@ export default function SubscribePage() {
               </li>
             ))}
           </ul>
+        </div>
+          </div>
+          {/* === COLONNE DROITE : Carrousel vendeur (visuel + perks dynamiques) === */}
+          <aside className="md:sticky md:top-6 md:self-start">
+            <SubscribeCampaignsCarousel plan={selectedPlan} />
+          </aside>
         </div>
 
         {/* Mobile Money — details de paiement PawaPay */}

@@ -93,7 +93,7 @@ function CollectionCover({ thumbnails, name }: { thumbnails: string[]; name: str
 function FavoritesPageContent() {
   // Force le choix d'un plan : redirige vers /subscribe?required=1
   // si l'utilisateur n'a pas d'abonnement actif.
-  useRequireActiveSubscription()
+  const { checking: subChecking, locked: subLocked } = useRequireActiveSubscription()
 
   const {
     favoritesWithCampaigns,
@@ -831,6 +831,20 @@ function FavoritesPageContent() {
 
         {/* Grille de campagnes */}
         {renderFavoritesContent()}
+      </div>
+    )
+  }
+
+  // Garde abonnement : pas d'accès aux favoris tant que l'utilisateur n'a pas de plan actif.
+  if (subChecking || subLocked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F4F8FB]">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#F2B33D] border-t-transparent" />
+          <p className="text-sm text-[#0F0F0F]/70">
+            {subLocked ? "On prépare votre accès Laveiye…" : "Chargement…"}
+          </p>
+        </div>
       </div>
     )
   }

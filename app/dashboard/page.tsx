@@ -246,7 +246,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }: { currentPage:
 export default function DashboardPage() {
   // Force le choix d'un plan : redirige vers /subscribe?required=1
   // si l'utilisateur n'a pas d'abonnement actif (plan Free desactive).
-  useRequireActiveSubscription()
+  const { checking: subChecking, locked: subLocked } = useRequireActiveSubscription()
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -964,6 +964,21 @@ export default function DashboardPage() {
   }
 
   const weekLabel = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "d MMMM yyyy", { locale: fr })
+
+  // Tant que l'abonnement n'est pas validé (ou en cours de vérif), on n'affiche
+  // PAS le contenu du dashboard — sinon il "flashe" avant le redirect vers /subscribe.
+  if (subChecking || subLocked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-white via-white to-[#F5F5F5]/20">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#F2B33D] border-t-transparent" />
+          <p className="text-sm text-[#0F0F0F]/70">
+            {subLocked ? "On prépare votre accès Laveiye…" : "Chargement de votre espace…"}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen overflow-x-clip bg-gradient-to-br from-white via-white to-[#F5F5F5]/20 relative">

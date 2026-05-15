@@ -91,11 +91,11 @@ export default function ProfilePage() {
         .eq("id", authUser.id)
         .single()
 
-      // Vérifier aussi les paiements confirmés
+      // Vérifier aussi les paiements confirmés (table payments est indexée par user_email)
       const { data: paymentsData } = await supabase
         .from("payments")
         .select("id, ref_command, amount, created_at, status, payment_method")
-        .eq("user_id", authUser.id)
+        .eq("user_email", authUser.email)
         .order("created_at", { ascending: false })
         .limit(10)
 
@@ -308,7 +308,7 @@ export default function ProfilePage() {
       const { data: paymentsData } = await supabase
         .from("payments")
         .select("id, ref_command, amount, created_at, status, payment_method")
-        .eq("user_id", authUser.id)
+        .eq("user_email", authUser.email)
         .order("created_at", { ascending: false })
         .limit(10)
 

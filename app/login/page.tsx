@@ -27,6 +27,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
   const [stats, setStats] = useState({ users: 0, campaigns: 0, brands: 0, countries: 0 })
   const [featuredCampaigns, setFeaturedCampaigns] = useState<Array<{
     id: string
@@ -72,9 +74,39 @@ export default function LoginPage() {
     return () => { cancelled = true }
   }, [])
 
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast.error("Saisis ton email d'abord")
+      return
+    }
+    setResendLoading(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        },
+      })
+      if (error) {
+        toast.error("Impossible d'envoyer l'email", { description: error.message })
+        return
+      }
+      toast.success("Email de vérification renvoyé", {
+        description: "Pense à vérifier aussi tes spams.",
+      })
+    } catch (err: any) {
+      toast.error("Une erreur est survenue", { description: err?.message })
+    } finally {
+      setResendLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setNeedsVerification(false)
 
     try {
       const supabase = createClient()
@@ -90,8 +122,9 @@ export default function LoginPage() {
             description: "Aucun compte n'est associé à cet email ou le mot de passe est incorrect.",
           })
         } else if (error.message === "Email not confirmed") {
+          setNeedsVerification(true)
           toast.warning("Email non vérifié", {
-            description: "Veuillez vérifier votre boîte mail pour confirmer votre compte.",
+            description: "Clique sur le lien dans ton email, ou renvoie-le ci-dessous.",
           })
         } else {
           toast.error("Erreur de connexion", {
@@ -194,6 +227,26 @@ export default function LoginPage() {
             <Button type="submit" className="h-11 w-full shadow-lg shadow-primary/25" disabled={isLoading}>
               {isLoading ? "Connexion..." : "Se connecter"}
             </Button>
+
+            {needsVerification && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+                <p className="mb-2 font-medium text-amber-900">
+                  Ton email n'est pas encore vérifié.
+                </p>
+                <p className="mb-3 text-amber-800/80">
+                  Clique sur le lien reçu par mail pour activer ton compte. Tu peux aussi en demander un nouveau&nbsp;:
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendLoading}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:opacity-60"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  {resendLoading ? "Envoi…" : "Renvoyer l'email de vérification"}
+                </button>
+              </div>
+            )}
 
           </form>
 

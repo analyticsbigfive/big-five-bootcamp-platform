@@ -27,9 +27,10 @@ async function activatePremiumForPayment(payment: any, explicitOverride?: string
 
   // Plan strict — source : metadata.plan, sinon explicitOverride (admin POST), sinon abort.
   const rawPlan = String(explicitOverride || payment.metadata?.plan || '').toLowerCase().trim();
-  let planName: 'Basic' | 'Pro' | null = null;
+  let planName: 'Discovery' | 'Basic' | 'Pro' | null = null;
   if (rawPlan === 'basic') planName = 'Basic';
   else if (rawPlan === 'pro') planName = 'Pro';
+  else if (rawPlan === 'discovery' || rawPlan === 'free') planName = 'Discovery';
 
   if (!planName) {
     console.error(

@@ -183,11 +183,13 @@ async function activateUserSubscription(payment: {
     // Plan strict — pas de fallback silencieux vers Pro.
     // Si la métadonnée est absente/invalide, on log et on n'active pas (sécurité).
     const rawPlan = String(metadata.plan || '').toLowerCase().trim()
-    let planName: 'Basic' | 'Pro'
+    let planName: 'Discovery' | 'Basic' | 'Pro'
     if (rawPlan === 'basic') {
       planName = 'Basic'
     } else if (rawPlan === 'pro') {
       planName = 'Pro'
+    } else if (rawPlan === 'discovery' || rawPlan === 'free') {
+      planName = 'Discovery'
     } else {
       console.error(
         '[pawapay/deposit] Plan invalide ou manquant dans metadata, activation annul\u00e9e',

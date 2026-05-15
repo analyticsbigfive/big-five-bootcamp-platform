@@ -48,7 +48,7 @@ export async function GET(
       .from('payments')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_email', user.email)
       .single()
 
     if (error || !payment) {

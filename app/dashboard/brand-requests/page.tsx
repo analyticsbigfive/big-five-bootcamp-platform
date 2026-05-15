@@ -339,9 +339,9 @@ export default function BrandRequestsPage() {
 
   const supabase = createClient()
   const router = useRouter()
-  const isAllowed =
-    userRole.toLowerCase() === 'admin' ||
-    ALLOWED_PLANS.includes(userPlan.toLowerCase())
+  // Les demandes de devis sont ouvertes à tous les utilisateurs connectés,
+  // même sans abonnement actif (exception explicite à la garde globale).
+  const isAllowed = isAuthenticated
 
   // ---------------------------------------------------------------------
   // Agrégation par marque — pour la section "Récap"
@@ -417,7 +417,7 @@ export default function BrandRequestsPage() {
 
           if (!mounted) return
           if (profile) {
-            setUserPlan(profile.plan || 'Free')
+            setUserPlan(profile.plan || '')
             setUserRole((profile as any).role || 'user')
           }
         }

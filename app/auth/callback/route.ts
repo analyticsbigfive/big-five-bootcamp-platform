@@ -14,9 +14,15 @@ export async function GET(request: Request) {
     const cookieStore = await cookies()
 
     // Détecter le flux de récupération de mot de passe via le cookie
-    // (fallback car les query params peuvent être perdus lors du redirect Supabase)
+    // (fallback car les query params peuvent être perdus lors du redirect Supabase).
+    // IMPORTANT : un `type` explicite (signup, email, invite...) prime sur le cookie,
+    // sinon un email de vérification arrivé après un reset password est mal routé.
     const hasRecoveryCookie = cookieStore.get('sb-password-recovery')?.value === 'true'
-    const isRecoveryFlow = rawType === 'recovery' || next.includes('update-password') || hasRecoveryCookie
+    const isExplicitNonRecovery = rawType === 'signup' || rawType === 'email' || rawType === 'invite' || rawType === 'email_change'
+    const isRecoveryFlow =
+        rawType === 'recovery' ||
+        next.includes('update-password') ||
+        (hasRecoveryCookie && !isExplicitNonRecovery)
 
     // Collecter les cookies à écrire sur la réponse de redirection
     const cookiesToSet: { name: string; value: string; options: any }[] = []
