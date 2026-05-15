@@ -178,15 +178,22 @@ export default function SubscribePage() {
     basic: 2,
     pro: 3,
   }
+  // Fenêtre de renouvellement — alignée avec le serveur (RENEWAL_WINDOW_DAYS).
+  const RENEWAL_WINDOW_DAYS = 7
+  const inRenewalWindow = isActive && daysRemaining <= RENEWAL_WINDOW_DAYS
   const currentPlanKey = (userProfile?.plan || 'Free').toLowerCase()
   const currentPlanRank: number =
     currentPlanKey === 'pro' ? 3
     : currentPlanKey === 'basic' ? 2
     : currentPlanKey === 'discovery' ? 1
     : 0
-  /** Un plan est verrouillé si l'abonnement est actif ET de rang strictement supérieur. */
+  /**
+   * Un plan est verrouillé UNIQUEMENT si l'abonnement est actif, de rang supérieur,
+   * ET qu'on est en dehors de la fenêtre de renouvellement. À l'intérieur de la
+   * fenêtre, l'utilisateur peut downgrader.
+   */
   const isPlanLocked = (key: PlanChoice) =>
-    !!isActive && PLAN_RANKS[key] < currentPlanRank
+    !!isActive && PLAN_RANKS[key] < currentPlanRank && !inRenewalWindow
 
   // Si le plan présélectionné via ?plan=... est inférieur au plan actif,
   // basculer sur le plan actif pour éviter d'afficher une carte "downgrade".

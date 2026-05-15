@@ -40,6 +40,14 @@ const SUBSCRIPTION_DURATION_DAYS = 30;
 const ANNUAL_SUBSCRIPTION_DURATION_DAYS = 365;
 
 /**
+ * Fenêtre de renouvellement (en jours avant `subscription_end_date`).
+ * À l'intérieur de cette fenêtre, l'utilisateur peut souscrire à un plan
+ * inférieur (downgrade). En dehors, le downgrade reste bloqué pour éviter
+ * que l'utilisateur ne perde inutilement des jours déjà payés.
+ */
+const RENEWAL_WINDOW_DAYS = 7;
+
+/**
  * Rang d'un plan pour interdire les downgrades quand l'abonnement
  * est encore actif. Free < Découverte < Basic < Pro.
  */
@@ -201,20 +209,31 @@ export async function POST(request: NextRequest) {
       && currentEndDate > now;
 
     // ——————————————————————————————————————————————————
-    // Anti-downgrade : si l'abonnement est encore actif,
-    // l'utilisateur ne peut souscrire qu'au même plan (renouvellement)
-    // ou à un plan supérieur (upgrade). Pas de downgrade payant.
+    // Downgrade : autorisé UNIQUEMENT dans la fenêtre de renouvellement
+    // (≤ RENEWAL_WINDOW_DAYS avant la fin) ou si l'abonnement est déjà
+    // expiré. En dehors de cette fenêtre, on bloque pour ne pas faire
+    // perdre à l'utilisateur les jours déjà payés au tarif supérieur.
     // ——————————————————————————————————————————————————
     if (isCurrentlyActive) {
       const currentRank = planRank((existingUser as any).plan);
       const targetRank = planRank(planConfig.dbKey);
       if (targetRank < currentRank) {
-        return NextResponse.json(
-          {
-            error: `Vous êtes déjà abonné à un plan supérieur (${(existingUser as any).plan}). Le downgrade vers ${planConfig.label} n'est pas autorisé tant que votre abonnement actuel est actif (expire le ${currentEndDate!.toLocaleDateString('fr-FR')}).`,
-          },
-          { status: 403 }
+        const daysUntilEnd = Math.ceil(
+          (currentEndDate!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
         );
+        const inRenewalWindow = daysUntilEnd <= RENEWAL_WINDOW_DAYS;
+        if (!inRenewalWindow) {
+          return NextResponse.json(
+            {
+              error: `Vous êtes déjà abonné à un plan supérieur (${(existingUser as any).plan}). Le downgrade vers ${planConfig.label} sera possible à partir du renouvellement (${RENEWAL_WINDOW_DAYS} jours avant l'expiration). Votre abonnement actuel expire le ${currentEndDate!.toLocaleDateString('fr-FR')}.`,
+              renewableFrom: new Date(
+                currentEndDate!.getTime() - RENEWAL_WINDOW_DAYS * 24 * 60 * 60 * 1000
+              ).toISOString(),
+              currentEndDate: currentEndDate!.toISOString(),
+            },
+            { status: 403 }
+          );
+        }
       }
     }
 
