@@ -600,15 +600,24 @@ export default function ProfilePage() {
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-xs text-muted-foreground">{dateLabel}</span>
                         {isCompleted && (
-                          <a
-                            href={`/api/payment/receipt/${payment.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
-                          >
-                            <Download className="h-3 w-3" />
-                            Reçu
-                          </a>
+                          <>
+                            <a
+                              href={`/api/payment/receipt/${payment.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+                            >
+                              <Receipt className="h-3 w-3" />
+                              Reçu
+                            </a>
+                            <a
+                              href={`/api/payment/receipt/${payment.id}?download=1`}
+                              className="flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                            >
+                              <Download className="h-3 w-3" />
+                              Télécharger
+                            </a>
+                          </>
                         )}
                       </div>
                     </div>

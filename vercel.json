@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/brand-renewals",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/check-subscriptions",
+      "schedule": "5 0 * * *"
     }
   ]
 }

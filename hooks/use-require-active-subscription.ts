@@ -42,7 +42,8 @@ export function useRequireActiveSubscription(): {
   const profileReady = !loading && (!user || userProfile !== null)
   const plan = (userProfile as any)?.plan as string | null | undefined
   const status = (userProfile as any)?.subscription_status as string | null | undefined
-  const locked = profileReady && !!user && isLockedAccount(plan, status) && !onSubscribePath
+  const endDate = (userProfile as any)?.subscription_end_date as string | null | undefined
+  const locked = profileReady && !!user && isLockedAccount(plan, status, endDate) && !onSubscribePath
 
   useEffect(() => {
     if (!locked) return
@@ -52,6 +53,6 @@ export function useRequireActiveSubscription(): {
   return {
     checking: !profileReady,
     locked,
-    allowed: profileReady && (!user || onSubscribePath || !isLockedAccount(plan, status)),
+    allowed: profileReady && (!user || onSubscribePath || !isLockedAccount(plan, status, endDate)),
   }
 }

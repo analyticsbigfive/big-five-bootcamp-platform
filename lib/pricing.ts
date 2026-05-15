@@ -16,7 +16,7 @@
  */
 
 export const PLAN_LOCKED = {
-  name: "Locked",
+  name: "Non abonné",
   tagline: "Compte sans abonnement actif",
   price: 0,
   annualPrice: 0,
@@ -156,15 +156,28 @@ export function canAccessPremiumContent(plan: string | null | undefined): boolea
  * Indique si l'utilisateur n'a aucun abonnement actif.
  * Aucun accès n'est autorisé tant que cette fonction renvoie true —
  * use-require-active-subscription redirige alors vers /subscribe.
+ *
+ * Verrouille également si la date de fin est passée, même si le cron
+ * /api/cron/check-subscriptions n'a pas encore basculé le status.
  */
 export function isLockedAccount(
   plan: string | null | undefined,
   subscriptionStatus: string | null | undefined,
+  subscriptionEndDate?: string | Date | null,
 ): boolean {
   const status = (subscriptionStatus || "").toLowerCase()
   if (status !== "active") return true
   const p = (plan || "").toLowerCase()
-  return !(p === "discovery" || p === "basic" || p === "pro")
+  if (!(p === "discovery" || p === "basic" || p === "pro")) return true
+  // Filet de sécurité coté client : si la fin d'abonnement est dépassée,
+  // on considère le compte verrouillé même si le status DB est encore 'active'.
+  if (subscriptionEndDate) {
+    const end = subscriptionEndDate instanceof Date
+      ? subscriptionEndDate
+      : new Date(subscriptionEndDate)
+    if (!isNaN(end.getTime()) && end.getTime() <= Date.now()) return true
+  }
+  return false
 }
 
 /** @deprecated Utiliser `isLockedAccount`. Conservé pour rétro-compat. */
