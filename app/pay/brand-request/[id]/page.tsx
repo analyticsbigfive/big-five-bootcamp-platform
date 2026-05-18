@@ -49,7 +49,7 @@ export default async function BrandRequestPaymentPage({ params }: PageProps) {
           </div>
           <h1 className="text-xl font-bold text-[#0F0F0F]">Paiement du devis</h1>
           <p className="text-sm text-[#0F0F0F]/60 mt-1">
-            Suivi de marque — <strong>{req.brand_name}</strong>
+            Veille concurrentielle — <strong>{req.brand_name}</strong>
           </p>
         </div>
 

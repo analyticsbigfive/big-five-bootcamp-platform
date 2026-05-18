@@ -148,6 +148,37 @@ export async function POST(
             '[pawapay/check] Plan invalide ou manquant dans metadata, activation annulee',
             { paymentId: paymentData.id, rawPlan, metadata: paymentData.metadata }
           );
+        } else if (
+          paymentData.metadata.is_downgrade === true &&
+          paymentData.metadata.pending_starts_at
+        ) {
+          // Downgrade différé : écrire pending_* au lieu d'écraser plan courant.
+          // Doit rester aligné avec la même branche dans le callback PawaPay
+          // (app/api/payment/pawapay/callback/deposit/route.ts).
+          await supabase
+            .from('users')
+            .update({
+              pending_plan: planName,
+              pending_plan_starts_at: paymentData.metadata.pending_starts_at,
+              pending_billing: paymentData.metadata.billing || null,
+              pending_duration_days: paymentData.metadata.duration_days || null,
+              updated_at: new Date().toISOString(),
+            } as any)
+            .eq('id', paymentData.metadata.userId);
+
+          if (paymentData.metadata.promo_code) {
+            await supabase
+              .from('keynote_registrations')
+              .update({ promo_redeemed_at: new Date().toISOString() } as any)
+              .eq('promo_code', paymentData.metadata.promo_code)
+              .is('promo_redeemed_at', null);
+          }
+
+          console.log(
+            '[pawapay/check] Downgrade différé enregistré pour user:',
+            paymentData.metadata.userId,
+            '— pending:', planName
+          );
         } else {
           await supabase
             .from('users')

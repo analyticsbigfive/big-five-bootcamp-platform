@@ -46,6 +46,7 @@ export default function KeynoteAdminPage() {
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -248,6 +249,37 @@ export default function KeynoteAdminPage() {
           <Button onClick={() => sync(false)} disabled={isSyncing} className="bg-amber-500 hover:bg-amber-600">
             {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             Tout synchroniser
+          </Button>
+          <Button
+            variant="outline"
+            disabled={isImporting}
+            onClick={async () => {
+              setIsImporting(true);
+              try {
+                const res = await fetch("/api/admin/keynote/import", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({}),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Erreur import");
+                toast.success(
+                  `${data.imported} importé${data.imported > 1 ? "s" : ""} · ${data.skipped} ignoré${data.skipped > 1 ? "s" : ""}`
+                );
+                if (data.errors?.length) {
+                  console.warn("Import errors:", data.errors);
+                  toast.warning(`${data.errors.length} erreur(s) — voir console`);
+                }
+                fetchData(search);
+              } catch (err: any) {
+                toast.error(err.message || "Import Mailchimp échoué");
+              } finally {
+                setIsImporting(false);
+              }
+            }}
+          >
+            {isImporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Importer Mailchimp
           </Button>
         </div>
       </div>

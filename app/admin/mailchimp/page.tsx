@@ -45,6 +45,10 @@ export default function MailchimpSettingsPage() {
   const [keynoteTag, setKeynoteTag] = useState("");
   const [keynotePromoTag, setKeynotePromoTag] = useState("");
 
+  // Audience #BigFiveDecrypte (séparée — debrief mensuel Pro)
+  const [decrypteAudienceId, setDecrypteAudienceId] = useState("");
+  const [decrypteTag, setDecrypteTag] = useState("");
+
   // États UI
   const [showApiKey, setShowApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,6 +87,8 @@ export default function MailchimpSettingsPage() {
           setKeynoteAudienceId(data.settings.mailchimp_keynote_audience_id || "");
           setKeynoteTag(data.settings.mailchimp_keynote_tag || "");
           setKeynotePromoTag(data.settings.mailchimp_keynote_promo_tag || "");
+          setDecrypteAudienceId(data.settings.mailchimp_decrypte_audience_id || "");
+          setDecrypteTag(data.settings.mailchimp_decrypte_tag || "");
         }
       } catch {
         console.error("Erreur chargement configuration Mailchimp");
@@ -119,6 +125,8 @@ export default function MailchimpSettingsPage() {
             mailchimp_keynote_audience_id: keynoteAudienceId.trim(),
             mailchimp_keynote_tag: keynoteTag.trim(),
             mailchimp_keynote_promo_tag: keynotePromoTag.trim(),
+            mailchimp_decrypte_audience_id: decrypteAudienceId.trim(),
+            mailchimp_decrypte_tag: decrypteTag.trim(),
           },
         }),
       });
@@ -484,6 +492,66 @@ export default function MailchimpSettingsPage() {
                   <li><code>LNAME</code> — Nom (par défaut)</li>
                   <li><code>COUNTRY</code> — Pays (Text)</li>
                   <li><code>PROMO</code> — Code promo généré (Text)</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Audience #BigFiveDecrypte */}
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/10">
+                  <Mail className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-gray-900">Audience #BigFiveDecrypte</CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Audience dédiée aux inscriptions Pro à la session mensuelle de debrief. Les demandes envoyées depuis <code>/decrypte</code> sont automatiquement ajoutées à cette audience.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 max-w-lg">
+              <div>
+                <Label htmlFor="mc-decrypte-audience-id" className="text-gray-900">
+                  ID de l'audience Decrypte
+                </Label>
+                <p className="text-xs text-gray-500 mb-1.5">
+                  ID de la liste Mailchimp recevant les inscriptions #BigFiveDecrypte. Si vide, l'audience principale est utilisée.
+                </p>
+                <Input
+                  id="mc-decrypte-audience-id"
+                  value={decrypteAudienceId}
+                  onChange={(e) => setDecrypteAudienceId(e.target.value)}
+                  placeholder="a1b2c3d4e5"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="mc-decrypte-tag" className="text-gray-900">
+                  Tag Decrypte
+                </Label>
+                <p className="text-xs text-gray-500 mb-1.5">
+                  Tag appliqué aux inscrits (par défaut : <code>bigfive-decrypte</code>). Un tag complémentaire <code>decrypte-YYYY-MM</code> est ajouté automatiquement.
+                </p>
+                <Input
+                  id="mc-decrypte-tag"
+                  value={decrypteTag}
+                  onChange={(e) => setDecrypteTag(e.target.value)}
+                  placeholder="bigfive-decrypte"
+                />
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-900">
+                <p className="font-medium mb-1">Champs de fusion (merge fields) recommandés :</p>
+                <ul className="list-disc list-inside text-xs space-y-0.5">
+                  <li><code>FNAME</code> / <code>LNAME</code> — Nom complet (par défaut)</li>
+                  <li><code>COMPANY</code> — Entreprise (Text)</li>
+                  <li><code>JOBTITLE</code> — Poste (Text)</li>
+                  <li><code>TOPICS</code> — Sujets d'intérêt (Text)</li>
+                  <li><code>PHONE</code> — Téléphone (Text)</li>
+                  <li><code>SESSION</code> — Session du mois (Text, ex: <code>2026-05</code>)</li>
                 </ul>
               </div>
             </CardContent>

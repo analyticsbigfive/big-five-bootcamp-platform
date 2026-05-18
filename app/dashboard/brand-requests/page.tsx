@@ -768,7 +768,7 @@ export default function BrandRequestsPage() {
                   <div className="text-sm text-green-800">
                     <p className="font-semibold mb-0.5">Demande envoyée avec succès !</p>
                     <p>
-                      Votre demande de suivi de marque a bien été enregistrée. L'équipe LAVEIYE
+                      Votre demande de veille concurrentielle a bien été enregistrée. L'équipe LAVEIYE
                       vous contactera par email afin d'échanger sur votre besoin et vous transmettre
                       une proposition adaptée.
                     </p>
@@ -987,7 +987,7 @@ export default function BrandRequestsPage() {
                   className="mb-8 rounded-xl border border-[#F5F5F5] bg-white p-6 shadow-sm"
                 >
                   <h2 className="text-lg font-bold text-[#0F0F0F] mb-2">
-                    Nouvelle demande de suivi de marque
+                    Nouvelle demande de veille concurrentielle
                   </h2>
 
                   {/* Bandeau d'explication : il s'agit d'une prestation sur devis

@@ -1203,7 +1203,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#0F0F0F]">
-                    À explorer pour votre suivi de marques
+                    À explorer pour votre veille concurrentielle
                   </h2>
                   <p className="text-sm font-medium text-[#0F0F0F]/60">
                     {resolvedBrandMonitoringGroups.length} marque{resolvedBrandMonitoringGroups.length > 1 ? 's' : ''} suivie{resolvedBrandMonitoringGroups.length > 1 ? 's' : ''}

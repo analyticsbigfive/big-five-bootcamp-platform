@@ -34,11 +34,55 @@ export async function GET(request: NextRequest) {
 
     const now = new Date().toISOString();
 
-    // 1. Trouver les abonnements actifs qui ont expiré
+    // 0. Appliquer les downgrades programmés (pending_plan) dont la date
+    //    d'activation est passée. À distinguer de l'expiration sèche : ici
+    //    l'utilisateur a déjà payé son nouveau plan, on bascule simplement.
+    let pendingApplied = 0;
+    try {
+      const { data: pendingUsers } = await (supabaseAdmin as any)
+        .from('users')
+        .select('id, email, plan, pending_plan, pending_plan_starts_at, pending_duration_days, pending_billing')
+        .not('pending_plan', 'is', null)
+        .lte('pending_plan_starts_at', now);
+
+      for (const u of (pendingUsers || [])) {
+        const startsAt = new Date(u.pending_plan_starts_at);
+        const durationDays = u.pending_duration_days || 30;
+        const newEnd = new Date(startsAt.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
+        const { error: applyErr } = await (supabaseAdmin as any)
+          .from('users')
+          .update({
+            plan: u.pending_plan,
+            subscription_status: 'active',
+            subscription_start_date: u.pending_plan_starts_at,
+            subscription_end_date: newEnd,
+            pending_plan: null,
+            pending_plan_starts_at: null,
+            pending_billing: null,
+            pending_duration_days: null,
+            updated_at: now,
+          })
+          .eq('id', u.id);
+
+        if (applyErr) {
+          console.error('[cron/check-subscriptions] apply pending failed', u.id, applyErr);
+        } else {
+          pendingApplied++;
+          console.log(`✅ Pending plan applied for ${u.email}: ${u.plan} → ${u.pending_plan}`);
+        }
+      }
+    } catch (e) {
+      console.error('[cron/check-subscriptions] pending plan apply error:', e);
+    }
+
+    // 1. Trouver les abonnements actifs qui ont expiré (et n'ont PAS de pending
+    //    qui vient juste d'être appliqué — protection idempotence).
     const { data: expiredUsers, error: fetchError } = await (supabaseAdmin as any)
       .from('users')
       .select('id, email, name, plan, subscription_status, subscription_end_date')
       .eq('subscription_status', 'active')
+      .is('pending_plan', null)
       .lt('subscription_end_date', now);
 
     if (fetchError) {
@@ -197,6 +241,7 @@ export async function GET(request: NextRequest) {
         ? `${expiredUsers.length} abonnement(s) downgradué(s)`
         : 'Aucun abonnement expiré.',
       downgraded: hasExpired ? expiredUsers.length : 0,
+      pending_applied: pendingApplied,
       expiring_reminders_sent: expiringRemindersSent,
       users: downgraded,
       checked_at: now,

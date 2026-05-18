@@ -199,6 +199,40 @@ async function activateUserSubscription(payment: {
       return
     }
 
+    // Downgrade différé : on stocke en `pending_plan` au lieu d'écraser
+    // le plan courant. Le cron `apply-pending-plans` basculera à expiration.
+    if (metadata.is_downgrade === true && metadata.pending_starts_at) {
+      console.log('[pawapay/deposit] Downgrade programmé', {
+        userId: metadata.userId,
+        pendingPlan: planName,
+        startsAt: metadata.pending_starts_at,
+        durationDays: metadata.duration_days,
+      })
+
+      await (supabaseAdmin as any)
+        .from('users')
+        .update({
+          pending_plan: planName,
+          pending_plan_starts_at: metadata.pending_starts_at,
+          pending_billing: metadata.billing || null,
+          pending_duration_days: metadata.duration_days || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', metadata.userId)
+
+      // Promo redemption marquée même pour un downgrade (cohérence single-use)
+      if (metadata.promo_code) {
+        await (supabaseAdmin as any)
+          .from('keynote_registrations')
+          .update({ promo_redeemed_at: new Date().toISOString() })
+          .eq('promo_code', metadata.promo_code)
+          .is('promo_redeemed_at', null)
+      }
+
+      console.log('✅ Downgrade différé enregistré pour user:', metadata.userId, '— pending:', planName)
+      return
+    }
+
     console.log('[pawapay/deposit] Activation abonnement', {
       userId: metadata.userId,
       plan: planName,

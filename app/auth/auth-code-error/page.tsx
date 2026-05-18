@@ -21,6 +21,7 @@ function AuthCodeErrorContent() {
   // code PKCE en query. Le serveur ne voit pas le hash → on a atterri ici.
   // On hydrate la session côté client puis on redirige vers /dashboard.
   const [recovering, setRecovering] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [resendEmail, setResendEmail] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState<string | null>(null);
@@ -45,14 +46,27 @@ function AuthCodeErrorContent() {
   // clic sur un lien : le 1er clic a déjà créé la session, le 2e atterrit ici.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    let cancelled = false;
     const supabase = createClient();
-    supabase.auth.getUser().then((res: any) => {
-      const u = res?.data?.user;
-      if (u) {
-        window.history.replaceState(null, "", window.location.pathname);
-        router.replace("/dashboard");
-      }
-    });
+    supabase.auth
+      .getUser()
+      .then((res: any) => {
+        if (cancelled) return;
+        const u = res?.data?.user;
+        if (u) {
+          window.history.replaceState(null, "", window.location.pathname);
+          router.replace("/dashboard");
+          return;
+        }
+        setCheckingSession(false);
+      })
+      .catch(() => {
+        if (!cancelled) setCheckingSession(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   useEffect(() => {
@@ -105,7 +119,7 @@ function AuthCodeErrorContent() {
     return "Le lien d'authentification n'est pas valide ou a expiré.";
   };
 
-  if (recovering) {
+  if (checkingSession || recovering) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#F5F5F5] via-white to-white p-4">
         <Card className="max-w-md w-full shadow-xl border-2">

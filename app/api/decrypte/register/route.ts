@@ -22,6 +22,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 interface Payload {
+  sessionId?: string
   fullName?: string
   phone?: string
   company?: string
@@ -131,24 +132,96 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const sessionMonth = currentSessionMonth()
+  // 4.b Resolution de la seance
+  // Si l'admin a defini des seances : sessionId est requis et doit pointer
+  // sur une seance 'open'. Sinon (table absente ou aucune seance), on retombe
+  // sur le mode "session du mois" historique.
+  const sessionIdRaw = String(body.sessionId || '').trim()
+  const sessionId = sessionIdRaw && /^[0-9a-f-]{32,}$/i.test(sessionIdRaw) ? sessionIdRaw : null
 
-  // 5. Empecher les doublons pour la session du mois en cours
-  const { data: existing } = await admin
-    .from('decrypte_registrations')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('session_month', sessionMonth)
-    .maybeSingle()
+  let resolvedSession: {
+    id: string
+    session_month: string
+    status: string
+    max_seats: number | null
+  } | null = null
 
-  if (existing?.id) {
-    return NextResponse.json(
-      {
-        error:
-          'Vous etes deja inscrit a la session #BigFiveDecrypte de ce mois. L\'equipe Big Five vous contactera bientot.',
-      },
-      { status: 409 }
-    )
+  if (sessionId) {
+    const { data: sess, error: sessErr } = await admin
+      .from('decrypte_sessions')
+      .select('id, session_month, status, max_seats')
+      .eq('id', sessionId)
+      .maybeSingle<{ id: string; session_month: string; status: string; max_seats: number | null }>()
+
+    if (sessErr) {
+      const code = (sessErr as { code?: string }).code
+      const msg = (sessErr as { message?: string }).message || ''
+      if (code === '42P01' || /relation .*decrypte_sessions.* does not exist/i.test(msg)) {
+        // Table sessions absente : on retombe sur le mode "session du mois"
+        console.warn('[decrypte/register] decrypte_sessions absente, fallback session_month')
+      } else {
+        console.error('[decrypte/register] session lookup error', sessErr)
+        return NextResponse.json({ error: 'Seance introuvable' }, { status: 400 })
+      }
+    } else if (!sess) {
+      return NextResponse.json({ error: 'Seance introuvable' }, { status: 404 })
+    } else if (sess.status !== 'open') {
+      return NextResponse.json(
+        { error: 'Cette seance n\'est plus ouverte aux inscriptions.' },
+        { status: 409 }
+      )
+    } else {
+      // Verifier la capacite
+      if (sess.max_seats != null) {
+        const { count } = await admin
+          .from('decrypte_registrations')
+          .select('id', { count: 'exact', head: true })
+          .eq('session_id', sess.id)
+        if ((count || 0) >= sess.max_seats) {
+          return NextResponse.json(
+            { error: 'Cette seance est complete.' },
+            { status: 409 }
+          )
+        }
+      }
+      resolvedSession = sess
+    }
+  }
+
+  const sessionMonth = resolvedSession?.session_month || currentSessionMonth()
+
+  // 5. Empecher les doublons
+  // - Si une seance est resolue : doublon par (user_id, session_id)
+  // - Sinon (mode legacy) : doublon par (user_id, session_month)
+  if (resolvedSession) {
+    const { data: existingBySession } = await admin
+      .from('decrypte_registrations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('session_id', resolvedSession.id)
+      .maybeSingle()
+    if (existingBySession?.id) {
+      return NextResponse.json(
+        { error: 'Vous etes deja inscrit a cette seance.' },
+        { status: 409 }
+      )
+    }
+  } else {
+    const { data: existing } = await admin
+      .from('decrypte_registrations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('session_month', sessionMonth)
+      .maybeSingle()
+    if (existing?.id) {
+      return NextResponse.json(
+        {
+          error:
+            'Vous etes deja inscrit a la session #BigFiveDecrypte de ce mois. L\'equipe Big Five vous contactera bientot.',
+        },
+        { status: 409 }
+      )
+    }
   }
 
   const ip =
@@ -158,37 +231,77 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || null
 
   // 6. Insert
+  const insertPayload: Record<string, unknown> = {
+    user_id: user.id,
+    email,
+    full_name: fullName,
+    phone,
+    company,
+    job_title: jobTitle,
+    topics_of_interest: topicsOfInterest,
+    preferred_channel: preferredChannel,
+    plan_at_signup: profile.plan || 'Pro',
+    session_month: sessionMonth,
+    consent_contact: consentContact,
+    source: 'decrypte-page',
+    ip,
+    user_agent: userAgent,
+  }
+  if (resolvedSession?.id) {
+    // Ne pas envoyer la cle si la migration sessions n'est pas encore appliquee
+    insertPayload.session_id = resolvedSession.id
+  }
+
   const { data: inserted, error: insertErr } = await (admin as any)
     .from('decrypte_registrations')
-    .insert({
-      user_id: user.id,
-      email,
-      full_name: fullName,
-      phone,
-      company,
-      job_title: jobTitle,
-      topics_of_interest: topicsOfInterest,
-      preferred_channel: preferredChannel,
-      plan_at_signup: profile.plan || 'Pro',
-      session_month: sessionMonth,
-      consent_contact: consentContact,
-      source: 'decrypte-page',
-      ip,
-      user_agent: userAgent,
-    })
+    .insert(insertPayload)
     .select('id')
     .single()
 
   if (insertErr) {
-    if ((insertErr as { code?: string }).code === '23505') {
+    const errCode = (insertErr as { code?: string }).code
+    const errMsg = (insertErr as { message?: string }).message || ''
+
+    if (errCode === '23505') {
       return NextResponse.json(
         { error: 'Vous etes deja inscrit a cette session.' },
         { status: 409 }
       )
     }
-    console.error('decrypte insert error:', insertErr)
+
+    // Table manquante (migration non appliquee) : message clair pour l'admin
+    if (
+      errCode === '42P01' ||
+      /relation .*decrypte_registrations.* does not exist/i.test(errMsg) ||
+      /could not find the table/i.test(errMsg)
+    ) {
+      console.error('[decrypte/register] table manquante :', insertErr)
+      return NextResponse.json(
+        {
+          error:
+            "La table d'inscription #BigFiveDecrypte n'est pas encore initialisee. Contactez l'equipe Big Five.",
+          code: 'table_missing',
+          hint: 'Appliquer scripts/bigfive-decrypte-registrations.sql sur Supabase',
+        },
+        { status: 500 }
+      )
+    }
+
+    console.error('[decrypte/register] insert error:', {
+      code: errCode,
+      message: errMsg,
+      details: (insertErr as { details?: string }).details,
+      hint: (insertErr as { hint?: string }).hint,
+    })
     return NextResponse.json(
-      { error: 'Impossible d\'enregistrer l\'inscription' },
+      {
+        error: "Impossible d'enregistrer l'inscription",
+        code: errCode || 'unknown',
+        details:
+          process.env.NODE_ENV === 'production'
+            ? undefined
+            : errMsg || 'Erreur Supabase',
+      },
       { status: 500 }
     )
   }
@@ -273,17 +386,62 @@ export async function GET(_request: NextRequest) {
   const tier = resolveTier(profile?.plan, profile?.subscription_status)
   const sessionMonth = currentSessionMonth()
 
-  const { data: registration } = await admin
-    .from('decrypte_registrations')
-    .select('id, session_month, created_at, full_name, email')
-    .eq('user_id', user.id)
-    .eq('session_month', sessionMonth)
-    .maybeSingle()
+  // On considere comme "deja inscrit" UNIQUEMENT une inscription liee a une
+  // seance precise (session_id non NULL). Les inscriptions historiques
+  // (sans session_id) ne bloquent pas l'utilisateur de choisir une nouvelle
+  // seance.
+  let registration: {
+    id: string
+    session_month: string
+    created_at: string
+    full_name: string
+    email: string
+    session_id?: string | null
+  } | null = null
+
+  // 1) Inscription liee a une seance (mode sessions)
+  try {
+    const { data: regWithSession, error: regSessErr } = await admin
+      .from('decrypte_registrations')
+      .select('id, session_month, created_at, full_name, email, session_id')
+      .eq('user_id', user.id)
+      .not('session_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (regSessErr) {
+      const errCode = (regSessErr as { code?: string }).code
+      const errMsg = (regSessErr as { message?: string }).message || ''
+      if (
+        errCode === '42P01' ||
+        /relation .*decrypte_registrations.* does not exist/i.test(errMsg)
+      ) {
+        console.error('[decrypte/register GET] table manquante')
+        return NextResponse.json({
+          canAccess: tier === 'pro',
+          currentTier: tier,
+          sessionMonth,
+          registration: null,
+          warning: 'table_missing',
+        })
+      }
+      // Si la colonne session_id n'existe pas (migration sessions non appliquee),
+      // on tombe en fallback ci-dessous.
+      if (errCode !== '42703') {
+        console.error('[decrypte/register GET] sess err:', regSessErr)
+      }
+    } else if (regWithSession) {
+      registration = regWithSession as any
+    }
+  } catch (e) {
+    // best effort
+  }
 
   return NextResponse.json({
     canAccess: tier === 'pro',
     currentTier: tier,
     sessionMonth,
-    registration: registration || null,
+    registration,
   })
 }

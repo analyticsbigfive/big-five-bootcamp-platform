@@ -139,14 +139,22 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      // Validation par couple (code, email) — le code seul ne suffit pas :
+      // l'email connecté DOIT correspondre à celui de l'inscription keynote
+      // qui a reçu le code. Empêche un tiers d'utiliser un code intercepté.
+      const promoEmail = (userEmail || '').toLowerCase().trim();
       const { data: regRow } = await supabaseAdmin
         .from('keynote_registrations')
-        .select('id, promo_code, promo_redeemed_at')
+        .select('id, email, promo_code, promo_redeemed_at')
         .eq('promo_code', normalizedPromo)
+        .eq('email', promoEmail)
         .maybeSingle();
 
       if (!regRow) {
-        return NextResponse.json({ error: 'Code promo introuvable' }, { status: 404 });
+        return NextResponse.json(
+          { error: 'Code promo invalide ou email ne correspondant pas à celui qui a reçu le code.' },
+          { status: 404 }
+        );
       }
       if ((regRow as any).promo_redeemed_at) {
         return NextResponse.json({ error: 'Ce code a déjà été utilisé' }, { status: 409 });
@@ -189,7 +197,7 @@ export async function POST(request: NextRequest) {
     // Verifier si l'utilisateur existe
     let { data: existingUser, error: userError } = await supabaseAdmin
       .from('users')
-      .select('id, email, name, subscription_status, subscription_end_date, plan')
+      .select('id, email, name, subscription_status, subscription_end_date, plan, pending_plan, pending_plan_starts_at')
       .eq('email', userEmail)
       .single();
 
@@ -239,35 +247,46 @@ export async function POST(request: NextRequest) {
       && currentEndDate > now;
 
     // ——————————————————————————————————————————————————
-    // Downgrade : autorisé UNIQUEMENT dans la fenêtre de renouvellement
-    // (≤ RENEWAL_WINDOW_DAYS avant la fin) ou si l'abonnement est déjà
-    // expiré. En dehors de cette fenêtre, on bloque pour ne pas faire
-    // perdre à l'utilisateur les jours déjà payés au tarif supérieur.
+    // Downgrade différé : le user paie maintenant un plan inférieur, mais son
+    // plan actuel reste actif jusqu'à `subscription_end_date`. À cette date,
+    // un cron applique le `pending_plan` et démarre la durée achetée.
+    //
+    // - Si downgrade : on flag `is_downgrade=true`, on stocke `pending_starts_at`
+    //   (= currentEndDate) et on n'étend PAS l'abonnement courant.
+    // - Si même plan ou upgrade : comportement historique (renouvellement /
+    //   extension à partir de currentEndDate, ou démarrage immédiat).
+    // - Si un downgrade est déjà en attente : refus pour éviter d'écraser.
     // ——————————————————————————————————————————————————
+    let isDowngrade = false;
+    let pendingStartsAt: Date | null = null;
+
     if (isCurrentlyActive) {
       const currentRank = planRank((existingUser as any).plan);
       const targetRank = planRank(planConfig.dbKey);
       if (targetRank < currentRank) {
-        const daysUntilEnd = Math.ceil(
-          (currentEndDate!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        const inRenewalWindow = daysUntilEnd <= RENEWAL_WINDOW_DAYS;
-        if (!inRenewalWindow) {
+        isDowngrade = true;
+        pendingStartsAt = currentEndDate;
+
+        // Bloquer si un downgrade est déjà programmé (pour éviter empilement).
+        if ((existingUser as any).pending_plan) {
           return NextResponse.json(
             {
-              error: `Vous êtes déjà abonné à un plan supérieur (${(existingUser as any).plan}). Le downgrade vers ${planConfig.label} sera possible à partir du renouvellement (${RENEWAL_WINDOW_DAYS} jours avant l'expiration). Votre abonnement actuel expire le ${currentEndDate!.toLocaleDateString('fr-FR')}.`,
-              renewableFrom: new Date(
-                currentEndDate!.getTime() - RENEWAL_WINDOW_DAYS * 24 * 60 * 60 * 1000
-              ).toISOString(),
-              currentEndDate: currentEndDate!.toISOString(),
+              error: `Un changement de plan est déjà programmé (${(existingUser as any).pending_plan}) pour le ${new Date((existingUser as any).pending_plan_starts_at).toLocaleDateString('fr-FR')}. Annulez-le ou attendez son application avant d'en programmer un autre.`,
+              pendingPlan: (existingUser as any).pending_plan,
+              pendingStartsAt: (existingUser as any).pending_plan_starts_at,
             },
-            { status: 403 }
+            { status: 409 }
           );
         }
       }
     }
 
-    const baseDate = isCurrentlyActive ? currentEndDate : now;
+    // Pour un downgrade différé : la durée s'applique à partir de la date
+    // d'activation différée, pas du moment du paiement. Pour les autres cas,
+    // logique historique (extension depuis currentEndDate si actif, sinon now).
+    const baseDate = isDowngrade
+      ? pendingStartsAt!
+      : (isCurrentlyActive ? currentEndDate : now);
     const subscriptionEndDate = new Date(baseDate!);
     subscriptionEndDate.setDate(subscriptionEndDate.getDate() + durationDays);
 
@@ -295,6 +314,8 @@ export async function POST(request: NextRequest) {
         plan_label: planConfig.label,
         billing: promoApplied ? 'promo3m' : (isAnnual ? 'annual' : 'monthly'),
         renewal: isCurrentlyActive,
+        is_downgrade: isDowngrade,
+        pending_starts_at: isDowngrade ? pendingStartsAt!.toISOString() : null,
         duration_days: durationDays,
         subscription_end_date: subscriptionEndDate.toISOString(),
         previous_end_date: isCurrentlyActive ? currentEndDate!.toISOString() : null,

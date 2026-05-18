@@ -21,6 +21,11 @@ interface UserProfile {
   subscriptionEndDate: string
   plan?: string
   monthlyUsage?: number
+  // Plan programmé (downgrade payé d'avance, activé à expiration du plan courant)
+  pendingPlan?: string | null
+  pendingStartsAt?: string | null
+  pendingDurationDays?: number | null
+  pendingBilling?: string | null
 }
 
 interface PaymentRecord {
@@ -72,6 +77,10 @@ export default function ProfilePage() {
     subscriptionEndDate: "",
     plan: "",
     monthlyUsage: 0,
+    pendingPlan: null,
+    pendingStartsAt: null,
+    pendingDurationDays: null,
+    pendingBilling: null,
   })
 
   // Charger les données utilisateur depuis Supabase
@@ -143,6 +152,10 @@ export default function ProfilePage() {
         subscriptionEndDate,
         plan: planName,
         monthlyUsage,
+        pendingPlan: profile?.pending_plan || null,
+        pendingStartsAt: profile?.pending_plan_starts_at || null,
+        pendingDurationDays: profile?.pending_duration_days || null,
+        pendingBilling: profile?.pending_billing || null,
       })
     } catch (error: any) {
       if (error?.name === 'AbortError') return
@@ -482,6 +495,30 @@ export default function ProfilePage() {
               <Check className="h-4 w-4" />
               <span className="text-sm font-medium">{planAccessLabel}</span>
             </div>
+
+            {/* Plan programmé (downgrade payé d'avance, activé à expiration). */}
+            {user.pendingPlan && user.pendingStartsAt && (
+              <div className="mt-4 rounded-lg border border-[#F2B33D]/30 bg-[#FFFBEC] p-3">
+                <div className="flex items-start gap-2">
+                  <RefreshCw className="h-4 w-4 text-[#a17320] mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-[#0F0F0F]">
+                      Prochain plan : {user.pendingPlan}
+                    </p>
+                    <p className="mt-0.5 text-[#0F0F0F]/70">
+                      Activation le{" "}
+                      <span className="font-semibold text-[#0F0F0F]">
+                        {format(new Date(user.pendingStartsAt), "d MMMM yyyy", { locale: fr })}
+                      </span>
+                      {user.pendingDurationDays
+                        ? <> pour <span className="font-semibold">{user.pendingDurationDays} jours</span></>
+                        : null}
+                      . Vous restez sur <strong>{planName}</strong> jusqu'à cette date.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {(!planKey || planKey === "free") && (
               <Button asChild className="mt-4 w-full shadow-lg shadow-primary/25 sm:w-auto bg-[#F2B33D] hover:bg-[#F2B33D]/90">
