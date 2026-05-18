@@ -11,7 +11,6 @@ import {
   Heart,
   Share2,
   ExternalLink,
-  Calendar,
   Building2,
   Tag,
   Globe,
@@ -110,6 +109,16 @@ function formatDescription(text: string): string {
     .replace(/\n/g, '<br/>')
 
   return `<p>${html}</p>`;
+}
+
+function stripMarkup(text: string | null | undefined): string {
+  if (!text) return "";
+  return text.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+}
+
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trim()}...`;
 }
 
 export default function ContentDetailClient({ id }: { id: string }) {
@@ -257,7 +266,8 @@ export default function ContentDetailClient({ id }: { id: string }) {
       const articleHeight = rect.height;
       const scrolled = window.scrollY - articleTop;
       const viewportHeight = window.innerHeight;
-      const progress = Math.min(100, Math.max(0, (scrolled / (articleHeight - viewportHeight)) * 100));
+      const scrollableHeight = Math.max(1, articleHeight - viewportHeight);
+      const progress = Math.min(100, Math.max(0, (scrolled / scrollableHeight) * 100));
       setReadProgress(progress);
     };
 
@@ -362,9 +372,30 @@ export default function ContentDetailClient({ id }: { id: string }) {
         ) : (
           <Navbar />
         )}
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <main className="container mx-auto max-w-7xl px-4 py-8">
+          <div className="mb-6 h-5 w-40 animate-pulse rounded-md bg-muted" />
+          <div className="mb-8 space-y-3">
+            <div className="h-9 w-full max-w-3xl animate-pulse rounded-lg bg-muted" />
+            <div className="h-4 w-72 animate-pulse rounded-md bg-muted" />
+          </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_500px]">
+            <div className="space-y-6">
+              <div className="aspect-[4/3] w-full animate-pulse rounded-xl bg-muted" />
+              <div className="rounded-xl border border-border p-6">
+                <div className="mb-4 h-6 w-52 animate-pulse rounded-md bg-muted" />
+                <div className="space-y-3">
+                  <div className="h-3 w-full animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-11/12 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-4/5 animate-pulse rounded bg-muted" />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="h-40 animate-pulse rounded-xl bg-muted" />
+              <div className="h-64 animate-pulse rounded-xl bg-muted" />
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -509,74 +540,75 @@ export default function ContentDetailClient({ id }: { id: string }) {
     );
   }
 
-  // Extraire les infos depuis les champs
-  const platform = content.platforms?.[0] || 'N/A';
-  const sector = content.category || 'N/A';
-  const format = content.format || content.tags?.[0] || 'N/A';
-  const country = content.country || "Côte d'Ivoire";
+  // Extraire les infos depuis les champs. Les champs absents sont masques
+  // plutot qu'affiches en "N/A", pour garder la fiche fiable et scannable.
+  const platform = content.platforms?.filter(Boolean).join(", ") || "";
+  const sector = content.category || "";
+  const format = content.format || content.tags?.[0] || "";
+  const country = content.country || "";
   const brand = content.brand || '';
   const agency = content.agency || '';
-  const date = content.date || new Date(content.created_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+  const plainDescription = stripMarkup(content.description);
+  const subtitle = [brand, sector].filter(Boolean).join(" - ");
+  const infoItems = [
+    brand && { icon: Building2, label: "Marque", value: brand },
+    sector && { icon: Tag, label: "Secteur", value: sector },
+    country && { icon: Globe, label: "Pays", value: country },
+    format && { icon: Mail, label: "Format", value: format },
+    platform && { icon: Monitor, label: "Plateforme", value: platform },
+    agency && { icon: Building2, label: "Agence", value: agency },
+  ].filter(Boolean) as Array<{
+    icon: typeof Building2;
+    label: string;
+    value: string;
+  }>;
 
   const hasGallery = !!(content.thumbnail || (content.images && content.images.length > 0));
 
-  // Helper pour rendre un lien de contenu similaire
-  const renderRelatedItem = (item: Campaign) => (
-    <Link
-      key={item.id}
-      href={`/content/${item.slug || item.id}`}
-      className="flex gap-3 group"
-      onClick={async (e) => {
-        // Si déjà bloqué, empêcher la navigation et proposer l'upgrade
-        if (isFreeUser && isBlocked) {
-          e.preventDefault();
-          setShowUpgrade(true);
-          return;
-        }
-        // Vérifier si l'utilisateur est à la limite avant de naviguer
-        if (isFreeUser) {
-          e.preventDefault();
-          try {
-            const res = await fetch('/api/track-click'); // GET
-            if (res.ok) {
-              const data = await res.json();
-              if (data.isFree && data.limit != null && (data.clicks || 0) >= data.limit) {
-                setIsBlocked(true);
-                setShowUpgrade(true);
-                return;
-              }
-            }
-          } catch { /* laisser passer */ }
-          router.push(`/content/${item.slug || item.id}`);
-        }
-      }}
-    >
-      <div className="relative w-14 h-14 bg-muted rounded-lg overflow-hidden flex-shrink-0">
-        {item.thumbnail ? (
-          <Image
-            src={getGoogleDriveImageUrl(item.thumbnail)}
-            alt={item.title}
-            fill
-            sizes="56px"
-            className="object-cover group-hover:scale-105 transition-transform"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-            {item.title.substring(0, 2).toUpperCase()}
-          </div>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-medium text-foreground group-hover:text-[#F2B33D] transition-colors line-clamp-1">
-          {item.title}
-        </h4>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {item.brand || item.category}
-        </p>
-      </div>
-    </Link>
-  );
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: content.title, url: window.location.href });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Lien copié !");
+    }
+  };
+
+  const handleAddToCollection = () => {
+    if (!isAuthenticated) {
+      window.location.href = `/login?redirect=/content/${id}`;
+      return;
+    }
+    setCollectionModalOpen(true);
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
+      window.location.href = `/login?redirect=/content/${id}`;
+      return;
+    }
+    if (isToggling) return;
+    const shouldFavorite = !isFavorite(content.id);
+    setIsToggling(true);
+    try {
+      const ok = await toggleFavorite(content.id);
+      if (ok) {
+        toast.success(shouldFavorite ? "Campagne sauvegardée" : "Campagne retirée des favoris");
+      }
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  const handleJumpToAnalysis = () => {
+    setActiveTab("axe");
+    requestAnimationFrame(() => {
+      document.getElementById("campaign-analysis")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
 
   // ===== MODE APERÇU PUBLIC (visiteurs non connectés) =====
   if (authChecked && !isUserAuthenticated) {
@@ -609,17 +641,20 @@ export default function ContentDetailClient({ id }: { id: string }) {
               <div className="relative rounded-2xl overflow-hidden shadow-xl border border-border">
                 {previewImageUrl ? (
                   <div className="relative">
-                    <img
+                    <Image
                       src={previewImageUrl}
                       alt={content.title}
-                      className="w-full h-auto max-h-[600px] object-contain bg-gray-50"
+                      width={1200}
+                      height={900}
+                      className="h-auto max-h-[600px] w-full object-contain bg-gray-50"
+                      priority
                     />
                     {/* Gradient overlay en bas */}
                     <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-background dark:via-background/80" />
                     <div className="absolute bottom-4 left-0 right-0 flex justify-center">
                       <div className="flex items-center gap-2 bg-white/95 dark:bg-background/95 backdrop-blur-sm rounded-full px-5 py-2.5 shadow-lg border border-border">
                         <Lock className="h-4 w-4 text-[#F2B33D]" />
-                        <span className="text-sm font-medium text-muted-foreground">Contenu complet : Basic ou Pro requis</span>
+                        <span className="text-sm font-medium text-muted-foreground">Contenu complet : plan actif requis</span>
                       </div>
                     </div>
                   </div>
@@ -664,7 +699,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
                     </div>
                     <h3 className="font-bold text-lg text-foreground mb-1">Analyse complète</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Inscrivez-vous pour accéder à l&apos;analyse détaillée, les axes stratégiques et bien plus.
+                      Créez votre compte, choisissez un plan, puis accédez à l&apos;analyse détaillée et aux axes stratégiques.
                     </p>
                     <div className="flex flex-col gap-2">
                       <Button
@@ -673,7 +708,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
                       >
                         <Link href={`/register?redirect=/content/${content.slug || content.id}`}>
                           <UserPlus className="h-4 w-4 mr-2" />
-                          S&apos;inscrire gratuitement
+                          Créer un compte et choisir un plan
                         </Link>
                       </Button>
                       <Button
@@ -698,9 +733,11 @@ export default function ContentDetailClient({ id }: { id: string }) {
                 <h1 className="text-xl md:text-2xl font-bold text-foreground font-[family-name:var(--font-heading)]">
                   {content.title}
                 </h1>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {brand}{brand && sector !== 'N/A' ? " - " : ""}{sector !== 'N/A' ? sector : ''}
-                </p>
+                {subtitle && (
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {subtitle}
+                  </p>
+                )}
               </div>
 
               {/* Badges axes */}
@@ -726,37 +763,13 @@ export default function ContentDetailClient({ id }: { id: string }) {
                   </h2>
 
                   <div className="space-y-3">
-                    {brand && (
-                      <div className="flex items-center gap-3 text-sm">
-                        <Building2 className="h-4 w-4 text-[#F2B33D]" />
-                        <span className="text-muted-foreground">Marque:</span>
-                        <span className="font-medium">{brand}</span>
+                    {infoItems.slice(0, 5).map(({ icon: Icon, label, value }) => (
+                      <div key={label} className="flex items-center gap-3 text-sm">
+                        <Icon className="h-4 w-4 text-[#F2B33D]" />
+                        <span className="text-muted-foreground">{label}:</span>
+                        <span className="font-medium">{value}</span>
                       </div>
-                    )}
-
-                    <div className="flex items-center gap-3 text-sm">
-                      <Globe className="h-4 w-4 text-[#F2B33D]" />
-                      <span className="text-muted-foreground">Pays:</span>
-                      <span className="font-medium">{country}</span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-sm">
-                      <Monitor className="h-4 w-4 text-[#F2B33D]" />
-                      <span className="text-muted-foreground">Plateforme:</span>
-                      <span className="font-medium">{platform}</span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-sm">
-                      <Mail className="h-4 w-4 text-[#F2B33D]" />
-                      <span className="text-muted-foreground">Format:</span>
-                      <span className="font-medium">{format}</span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-sm">
-                      <Calendar className="h-4 w-4 text-[#F2B33D]" />
-                      <span className="text-muted-foreground">Date:</span>
-                      <span className="font-medium">{date}</span>
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -776,7 +789,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
                     className="w-full bg-[#F2B33D] hover:bg-[#6b2d76] text-white font-semibold shadow-lg shadow-[#F2B33D]/25 h-12 text-base"
                   >
                     <Link href={`/register?redirect=/content/${content.slug || content.id}`}>
-                      S&apos;inscrire gratuitement
+                      Créer un compte et choisir un plan
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Link>
                   </Button>
@@ -793,14 +806,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
               <Button
                 variant="outline"
                 className="w-full gap-2 border-border hover:border-[#F2B33D]/30 hover:text-[#F2B33D]"
-                onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({ title: content.title, url: window.location.href });
-                  } else {
-                    navigator.clipboard.writeText(window.location.href);
-                    toast.success("Lien copié !");
-                  }
-                }}
+                onClick={handleShare}
               >
                 <Share2 className="h-4 w-4" />
                 Partager cette campagne
@@ -838,7 +844,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
         />
       </div>
 
-      <main ref={articleRef} className="container mx-auto px-4 py-8 max-w-6xl">
+      <main ref={articleRef} className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Back button */}
         <Link
           href="/dashboard"
@@ -870,46 +876,99 @@ export default function ContentDetailClient({ id }: { id: string }) {
               </div>
             )}
           </div>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {brand}{brand && sector !== 'N/A' ? " - " : ""}{sector !== 'N/A' ? sector : ''}
-          </p>
-        </div>
-
-        {/* ===== ONGLETS Axe / Utilisation ===== */}
-        <div className="mb-8">
-          <div className="inline-flex rounded-full border border-border bg-muted/30 p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab("axe")}
-              className={cn(
-                "rounded-full px-6 py-2 text-sm font-semibold transition-all duration-200",
-                activeTab === "axe"
-                  ? "bg-[#F2B33D] text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Campagne
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("utilisation")}
-              className={cn(
-                "rounded-full px-6 py-2 text-sm font-semibold transition-all duration-200",
-                activeTab === "utilisation"
-                  ? "bg-[#F2B33D] text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Détails
-            </button>
-          </div>
+          {subtitle && (
+            <p className="text-muted-foreground mt-1 text-sm">
+              {subtitle}
+            </p>
+          )}
         </div>
 
         {/* ===== GRILLE 2 COLONNES : contenu gauche + sidebar droite ===== */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_500px] gap-8 items-start">
 
           {/* ---- Colonne gauche : contenu principal ---- */}
-          <div className="space-y-6 min-w-0 order-2 lg:order-1">
+          <div className="space-y-6 min-w-0">
+
+            {/* Media principal */}
+            {hasGallery && (
+              <section className="space-y-3" aria-label="Visuels de la campagne">
+                <ImageGallery
+                  mainImage={content.thumbnail}
+                  images={content.images || []}
+                  title={content.title}
+                  campaignId={content.id}
+                  onAddToCollection={handleAddToCollection}
+                  onShare={handleShare}
+                  onToggleFavorite={handleToggleFavorite}
+                  floatingActionLabel="Voir l'analyse"
+                  onFloatingAction={handleJumpToAnalysis}
+                  isFavorited={isFavorite(content.id)}
+                />
+
+                {plainDescription && (
+                  <p className="px-1 text-sm leading-relaxed text-muted-foreground">
+                    {truncateText(plainDescription, 220)}
+                  </p>
+                )}
+              </section>
+            )}
+
+            <Card className="shadow-sm lg:hidden">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={isFavorite(content.id) ? "default" : "outline"}
+                    className={cn(
+                      "min-h-11 gap-2 whitespace-normal px-3 py-2 text-center leading-tight",
+                      isFavorite(content.id)
+                        ? "bg-[#F2B33D] text-[#0F0F0F] hover:bg-[#E4A82F] hover:text-[#0F0F0F]"
+                        : "hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                    )}
+                    disabled={isToggling}
+                    onClick={handleToggleFavorite}
+                    aria-pressed={isFavorite(content.id)}
+                  >
+                    {isToggling ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Heart className={cn("h-4 w-4", isFavorite(content.id) && "fill-current")} />
+                    )}
+                    {isFavorite(content.id) ? "Favori" : "Sauvegarder"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="min-h-11 gap-2 whitespace-normal px-3 py-2 text-center leading-tight hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                    onClick={handleAddToCollection}
+                  >
+                    <FolderPlus className="h-4 w-4" />
+                    Ajouter à une collection
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="min-h-11 gap-2 whitespace-normal px-3 py-2 text-center leading-tight hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                    onClick={handleShare}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Partager
+                  </Button>
+                  {content.publication_url && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="min-h-11 w-full gap-2 whitespace-normal border-[#F2B33D]/40 px-3 py-2 text-center leading-tight text-[#0F0F0F] hover:border-[#F2B33D] hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                    >
+                      <a href={content.publication_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                        Source
+                      </a>
+                    </Button>
+                  )}
+                </div>
+                <div className="mt-3 flex justify-center border-t border-border pt-3">
+                  <ReactionButtons campaignId={content.id} />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Video player — embed multi-plateforme (affiché dans les 2 tabs si présent) */}
             {content.video_url && (() => {
@@ -935,9 +994,11 @@ export default function ContentDetailClient({ id }: { id: string }) {
                         className="block relative group"
                       >
                         <div className="relative aspect-[9/16] max-h-[500px] w-full overflow-hidden bg-gray-100">
-                          <img
+                          <Image
                             src={getGoogleDriveImageUrl(content.thumbnail || '') || "/placeholder.jpg"}
                             alt={content.title}
+                            fill
+                            sizes="(max-width: 1024px) 100vw, 800px"
                             className="w-full h-full object-contain"
                           />
                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/40 transition-colors">
@@ -984,6 +1045,44 @@ export default function ContentDetailClient({ id }: { id: string }) {
                 </Card>
               );
             })()}
+
+            {/* Navigation de lecture */}
+            <div id="campaign-analysis" className="scroll-mt-24 flex overflow-x-auto pb-1">
+              <div
+                className="inline-flex rounded-full border border-border bg-muted/30 p-1"
+                role="tablist"
+                aria-label="Sections de la campagne"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "axe"}
+                  onClick={() => setActiveTab("axe")}
+                  className={cn(
+                    "whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 sm:px-6",
+                    activeTab === "axe"
+                      ? "bg-[#F2B33D] text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Analyse stratégique
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "utilisation"}
+                  onClick={() => setActiveTab("utilisation")}
+                  className={cn(
+                    "whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 sm:px-6",
+                    activeTab === "utilisation"
+                      ? "bg-[#F2B33D] text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Infos & tags
+                </button>
+              </div>
+            </div>
 
             {/* ---- Onglet AXE : Analyse + Comment s'en servir ---- */}
             {activeTab === "axe" && (
@@ -1145,184 +1244,108 @@ export default function ContentDetailClient({ id }: { id: string }) {
           </div>
 
           {/* ---- Colonne droite : Sidebar sticky ---- */}
-          <div className="order-1 lg:order-2 lg:sticky lg:top-6 space-y-6">
-            {/* Image créative */}
-            {hasGallery && (
-              <div className="space-y-4">
-                <ImageGallery
-                  mainImage={content.thumbnail}
-                  images={content.images || []}
-                  title={content.title}
-                  campaignId={content.id}
-                  onAddToCollection={() => {
-                    if (!isAuthenticated) {
-                      window.location.href = `/login?redirect=/content/${id}`;
-                      return;
-                    }
-                    setCollectionModalOpen(true);
-                  }}
-                  onShare={() => {
-                    if (navigator.share) {
-                      navigator.share({ title: content.title, url: window.location.href });
-                    } else {
-                      navigator.clipboard.writeText(window.location.href);
-                      toast.success("Lien copié !");
-                    }
-                  }}
-                  isFavorited={isFavorite(content.id)}
-                />
-
-                {/* Légende / description sous l'image */}
-                {content.description && (
-                  <p className="text-sm font-medium text-[#F2B33D] leading-relaxed line-clamp-4 px-1">
-                    {content.description.replace(/<[^>]*>/g, '').substring(0, 200)}{content.description.length > 200 ? '...' : ''}
+          <div className="lg:sticky lg:top-6 space-y-6">
+            <Card className="hidden shadow-sm lg:block">
+              <CardContent className="p-5 space-y-4">
+                <div>
+                  <h2 className="font-bold text-lg">Actions</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Gardez cette campagne sous la main ou partagez-la avec votre équipe.
                   </p>
-                )}
-              </div>
-            )}
+                </div>
 
-            {/* Boutons d'action + Réactions sur 1 ligne */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {isAdmin && content.id && (
-                <Link href={`/admin/campaigns?edit=${content.id}`}>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={isFavorite(content.id) ? "default" : "outline"}
+                    className={cn(
+                      "min-h-11 justify-start gap-2 whitespace-normal px-3 py-2 text-left leading-tight",
+                      isFavorite(content.id)
+                        ? "bg-[#F2B33D] text-[#0F0F0F] hover:bg-[#E4A82F] hover:text-[#0F0F0F]"
+                        : "hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                    )}
+                    disabled={isToggling}
+                    onClick={handleToggleFavorite}
+                    aria-pressed={isFavorite(content.id)}
+                  >
+                    {isToggling ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Heart className={cn("h-4 w-4", isFavorite(content.id) && "fill-current")} />
+                    )}
+                    {isFavorite(content.id) ? "Dans vos favoris" : "Sauvegarder"}
+                  </Button>
+
                   <Button
                     variant="outline"
-                    size="icon"
-                    className="h-10 w-10 text-[#0F0F0F] border-[#0F0F0F]/30 hover:bg-[#F5F5F5] dark:text-[#0F0F0F] dark:border-[#0F0F0F] dark:hover:bg-[#F2B33D]"
-                    title="Modifier cette campagne (Admin)"
+                    className="min-h-11 justify-start gap-2 whitespace-normal px-3 py-2 text-left leading-tight hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                    onClick={handleAddToCollection}
                   >
-                    <Pencil className="h-4 w-4" />
+                    <FolderPlus className="h-4 w-4" />
+                    Ajouter à une collection
                   </Button>
-                </Link>
-              )}
-              {/* Bouton Favori */}
-              <Button
-                variant={isFavorite(content.id) ? "default" : "outline"}
-                size="icon"
-                className={`h-10 w-10 border-border ${isFavorite(content.id) ? "bg-[#F2B33D] text-white hover:bg-[#b8850a]" : "hover:border-[#F2B33D]/30 hover:text-[#F2B33D]"}`}
-                disabled={isToggling}
-                onClick={async () => {
-                  if (!isAuthenticated) {
-                    window.location.href = `/login?redirect=/content/${id}`;
-                    return;
-                  }
-                  setIsToggling(true);
-                  try {
-                    await toggleFavorite(content.id);
-                  } finally {
-                    setIsToggling(false);
-                  }
-                }}
-                title={isFavorite(content.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
-                aria-pressed={isFavorite(content.id)}
-              >
-                <Heart className={`h-5 w-5 ${isFavorite(content.id) ? "fill-current" : ""}`} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 border-border hover:border-[#F2B33D]/30 hover:text-[#F2B33D]"
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    window.location.href = `/login?redirect=/content/${id}`;
-                    return;
-                  }
-                  setCollectionModalOpen(true);
-                }}
-                title="Ajouter à une collection"
-              >
-                <FolderPlus className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 border-border hover:border-[#F2B33D]/30 hover:text-[#F2B33D]"
-                onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({ title: content.title, url: window.location.href });
-                  } else {
-                    navigator.clipboard.writeText(window.location.href);
-                    toast.success("Lien copié !");
-                  }
-                }}
-                title="Partager"
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
-              <div className="h-6 w-px bg-border mx-1" />
-              <ReactionButtons campaignId={content.id} />
-            </div>
 
-            {/* Bouton Voir la publication originale */}
-            {content.publication_url && (
-              <a
-                href={content.publication_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 w-full"
-              >
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 border-[#F2B33D]/30 text-[#F2B33D] hover:bg-[#F2B33D]/5 hover:border-[#F2B33D] font-semibold"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Voir la publication
-                </Button>
-              </a>
-            )}
+                  <Button
+                    variant="outline"
+                    className="min-h-11 justify-start gap-2 hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                    onClick={handleShare}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Partager
+                  </Button>
+
+                  {content.publication_url && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="min-h-11 w-full justify-start gap-2 border-[#F2B33D]/40 text-[#0F0F0F] hover:border-[#F2B33D] hover:bg-[#FFF6E3] hover:text-[#0F0F0F] font-semibold"
+                    >
+                      <a href={content.publication_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                        Voir la publication
+                      </a>
+                    </Button>
+                  )}
+
+                  {isAdmin && content.id && (
+                    <Link href={`/admin/campaigns?edit=${content.id}`} className="col-span-2">
+                      <Button
+                        variant="outline"
+                        className="min-h-11 w-full justify-start gap-2 text-[#0F0F0F] border-[#0F0F0F]/20 hover:bg-[#F5F5F5]"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Modifier la campagne
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+
+                <div className="border-t border-border pt-4">
+                  <p className="mb-2 text-sm font-semibold text-muted-foreground">Réactions</p>
+                  <ReactionButtons campaignId={content.id} />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Carte Informations */}
             <Card className="shadow-sm">
               <CardContent className="p-6 space-y-4">
                 <h2 className="font-bold text-lg">Informations</h2>
 
-                <div className="space-y-3">
-                  {brand && (
-                    <div className="flex items-center gap-3 text-sm">
-                      <Building2 className="h-4 w-4 text-[#F2B33D]" />
-                      <span className="text-muted-foreground">Marque:</span>
-                      <span className="font-medium">{brand}</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-3 text-sm">
-                    <Tag className="h-4 w-4 text-[#F2B33D]" />
-                    <span className="text-muted-foreground">Secteur:</span>
-                    <span className="font-medium">{sector}</span>
+                {infoItems.length > 0 ? (
+                  <div className="space-y-3">
+                    {infoItems.map(({ icon: Icon, label, value }) => (
+                      <div key={label} className="flex items-center gap-3 text-sm">
+                        <Icon className="h-4 w-4 text-[#F2B33D]" />
+                        <span className="text-muted-foreground">{label}:</span>
+                        <span className="font-medium">{value}</span>
+                      </div>
+                    ))}
                   </div>
-
-                  <div className="flex items-center gap-3 text-sm">
-                    <Globe className="h-4 w-4 text-[#F2B33D]" />
-                    <span className="text-muted-foreground">Pays:</span>
-                    <span className="font-medium">{country}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-sm">
-                    <Mail className="h-4 w-4 text-[#F2B33D]" />
-                    <span className="text-muted-foreground">Format:</span>
-                    <span className="font-medium">{format}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-sm">
-                    <Monitor className="h-4 w-4 text-[#F2B33D]" />
-                    <span className="text-muted-foreground">Plateforme:</span>
-                    <span className="font-medium">{platform}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-sm">
-                    <Calendar className="h-4 w-4 text-[#F2B33D]" />
-                    <span className="text-muted-foreground">Date:</span>
-                    <span className="font-medium">{date}</span>
-                  </div>
-
-                  {agency && (
-                    <div className="flex items-center gap-3 text-sm">
-                      <Building2 className="h-4 w-4 text-[#F2B33D]" />
-                      <span className="text-muted-foreground">Agence:</span>
-                      <span className="font-medium">{agency}</span>
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Les informations de campagne seront ajoutées prochainement.
+                  </p>
+                )}
               </CardContent>
             </Card>
 

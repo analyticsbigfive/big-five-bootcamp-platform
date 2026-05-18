@@ -72,14 +72,14 @@ export function BasicToProBanner({
 
   if (variant === "compact") {
     return (
-      <div className="relative flex items-center gap-3 rounded-xl border border-[#F2B33D]/30 bg-gradient-to-r from-[#FFFBEC] to-white px-4 py-3 text-sm">
+      <div className="relative flex items-center gap-3 rounded-xl border border-[#F2B33D]/30 bg-gradient-to-r from-[#FFFBEC] to-[#FFF6E5] dark:from-[#F2B33D]/10 dark:to-card px-4 py-3 text-sm">
         <Zap className="h-4 w-4 shrink-0 text-[#F2B33D]" />
-        <span className="flex-1 text-[#0F0F0F]/80">
+        <span className="flex-1 text-foreground/80">
           <strong>{content.title}</strong> — {body}
         </span>
         <Link
           href="/subscribe?plan=pro"
-          className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#0F0F0F] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#0F0F0F]/85 transition-colors"
+          className="shrink-0 inline-flex items-center gap-1 rounded-full bg-foreground px-3 py-1.5 text-xs font-bold text-background hover:bg-foreground/85 transition-colors"
         >
           {content.cta}
           <ArrowRight className="h-3 w-3" />
@@ -90,7 +90,7 @@ export function BasicToProBanner({
             aria-label="Masquer ce message"
             title="Masquer"
             onClick={handleDismiss}
-            className="shrink-0 rounded-full p-1 text-[#0F0F0F]/40 hover:bg-[#F5F5F5] hover:text-[#0F0F0F] transition-colors"
+            className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -100,14 +100,14 @@ export function BasicToProBanner({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[#F2B33D]/30 bg-gradient-to-br from-[#FFFBEC] via-white to-[#FFF6E5] p-5 md:p-6">
+    <div className="relative overflow-hidden rounded-2xl border border-[#F2B33D]/30 bg-gradient-to-br from-[#FFFBEC] via-white to-[#FFF6E5] dark:from-[#F2B33D]/10 dark:via-card dark:to-card p-5 md:p-6">
       {dismissKey && (
         <button
           type="button"
           aria-label="Masquer ce message"
           title="Masquer"
           onClick={handleDismiss}
-          className="absolute top-3 right-3 rounded-full p-1.5 text-[#0F0F0F]/40 hover:bg-white/60 hover:text-[#0F0F0F] transition-colors"
+          className="absolute top-3 right-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -117,10 +117,10 @@ export function BasicToProBanner({
           <Sparkles className="h-5 w-5 text-[#F2B33D]" />
         </div>
         <div className="flex-1">
-          <h4 className="font-bold text-[#0F0F0F] text-base md:text-lg">
+          <h4 className="font-bold text-foreground text-base md:text-lg">
             {content.title}
           </h4>
-          <p className="mt-1 text-sm text-[#0F0F0F]/70">
+          <p className="mt-1 text-sm text-muted-foreground">
             {body}
             {typeof usagePercent === "number" && trigger === "searches-heavy" && (
               <> Vous avez utilisé <strong>{Math.round(usagePercent)}%</strong> de vos recherches mensuelles Basic.</>
@@ -129,7 +129,7 @@ export function BasicToProBanner({
         </div>
         <Link
           href="/subscribe?plan=pro"
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-[#0F0F0F] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#0F0F0F]/85 transition-colors"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-background hover:bg-foreground/85 transition-colors"
         >
           {content.cta}
           <ArrowRight className="h-4 w-4" />

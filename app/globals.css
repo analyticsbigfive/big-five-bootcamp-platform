@@ -3,6 +3,31 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Fallback CSS pur : applique les variables dark via la préférence système
+   avant même l'hydratation JS (next-themes injecte ensuite la classe .dark).
+   :root:not(.light) évite d'écraser le choix explicite "light" de l'utilisateur. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --text-dark: #F8FAFC;
+    --background: #0B0D10;
+    --foreground: #F8FAFC;
+    --card: #15181E;
+    --card-foreground: #F8FAFC;
+    --popover: #15181E;
+    --popover-foreground: #F8FAFC;
+    --muted: #20242C;
+    --muted-foreground: #B9C0CC;
+    --border: #2A303A;
+    --input: #20242C;
+    --secondary: #20242C;
+    --secondary-foreground: #F8FAFC;
+    --sidebar: #0B0D10;
+    --sidebar-accent: #20242C;
+    --sidebar-accent-foreground: #FFFFFF;
+    --sidebar-border: #2A303A;
+  }
+}
+
 :root {
   /* Big Five Brand Identity */
   --primary-violet: #F2B33D;
@@ -22,7 +47,7 @@
   
   /* Primary = Violet */
   --primary: #F2B33D;
-  --primary-foreground: #FFFFFF;
+  --primary-foreground: #0F0F0F;
   /* Secondary = Bleu profond */
   --secondary: #F5F5F5;
   --secondary-foreground: #0F0F0F;
@@ -60,19 +85,20 @@
 }
 
 .dark {
-  --background: #0F0F0F;
-  --foreground: #FFFFFF;
-  --card: #0F0F0F;
-  --card-foreground: #FFFFFF;
-  --popover: #0F0F0F;
-  --popover-foreground: #FFFFFF;
+  --text-dark: #F8FAFC;
+  --background: #0B0D10;
+  --foreground: #F8FAFC;
+  --card: #15181E;
+  --card-foreground: #F8FAFC;
+  --popover: #15181E;
+  --popover-foreground: #F8FAFC;
   
   --primary: #F2B33D;
-  --primary-foreground: #FFFFFF;
-  --secondary: #0F0F0F;
-  --secondary-foreground: #FFFFFF;
-  --muted: #0F0F0F;
-  --muted-foreground: #F5F5F5;
+  --primary-foreground: #0F0F0F;
+  --secondary: #20242C;
+  --secondary-foreground: #F8FAFC;
+  --muted: #20242C;
+  --muted-foreground: #B9C0CC;
   --accent: #F2B33D;
   --accent-foreground: #0F0F0F;
   
@@ -81,8 +107,8 @@
   --success: #10B981;
   --success-foreground: #FFFFFF;
   
-  --border: #0F0F0F;
-  --input: #0F0F0F;
+  --border: #2A303A;
+  --input: #20242C;
   --ring: #F2B33D;
   
   --chart-1: #F2B33D;
@@ -91,13 +117,13 @@
   --chart-4: #F5F5F5;
   --chart-5: #FFFFFF;
   
-  --sidebar: #0F0F0F;
+  --sidebar: #0B0D10;
   --sidebar-foreground: #FFFFFF;
   --sidebar-primary: #F2B33D;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #0F0F0F;
+  --sidebar-accent: #20242C;
   --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #0F0F0F;
+  --sidebar-border: #2A303A;
   --sidebar-ring: #F2B33D;
 }
 
@@ -148,10 +174,20 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html.dark {
+    color-scheme: dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not(.light) {
+      color-scheme: dark;
+    }
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-    color: var(--text-dark);
+    color: var(--foreground);
   }
 
   button:not(:disabled),
@@ -250,6 +286,89 @@
   /* Icônes en bleu */
   .icon {
     color: var(--secondary-blue);
+  }
+}
+
+@layer utilities {
+  .dark [class*="bg-white"] {
+    background-color: rgba(21, 24, 30, 0.96) !important;
+  }
+
+  .dark [class*="bg-[#FFFFFF]"] {
+    background-color: #15181E !important;
+  }
+
+  .dark [class*="bg-[#F4F8FB]"],
+  .dark [class*="bg-[#F5F5F5]"],
+  .dark [class*="bg-[#f8fafc]"],
+  .dark [class*="bg-[#f0f4ff]"] {
+    background-color: #0B0D10 !important;
+  }
+
+  .dark [class*="text-[#0F0F0F]"] {
+    color: #F8FAFC !important;
+  }
+
+  .dark [class*="text-[#0F0F0F]/80"] {
+    color: rgba(248, 250, 252, 0.8) !important;
+  }
+
+  .dark [class*="text-[#0F0F0F]/70"] {
+    color: rgba(248, 250, 252, 0.7) !important;
+  }
+
+  .dark [class*="text-[#0F0F0F]/60"] {
+    color: rgba(248, 250, 252, 0.62) !important;
+  }
+
+  .dark [class*="text-[#0F0F0F]/55"],
+  .dark [class*="text-[#0F0F0F]/50"] {
+    color: rgba(248, 250, 252, 0.58) !important;
+  }
+
+  .dark [class*="text-[#0F0F0F]/40"],
+  .dark [class*="text-[#0F0F0F]/35"] {
+    color: rgba(248, 250, 252, 0.42) !important;
+  }
+
+  .dark [class*="bg-[#F2B33D]"][class*="text-[#0F0F0F]"] {
+    color: #0F0F0F !important;
+  }
+
+  .dark [class*="border-[#F5F5F5]"],
+  .dark [class*="border-[#E8EDF2]"],
+  .dark [class*="border-[#DCE4EC]"],
+  .dark [class*="border-[#0F0F0F]/"] {
+    border-color: #2A303A !important;
+  }
+
+  .dark [class*="shadow-[#F2B33D]"] {
+    --tw-shadow-color: rgb(242 179 61 / 0.18) !important;
+  }
+
+  .dark [class*="from-[#f8fafc]"],
+  .dark [class*="from-[#F5F5F5]"] {
+    --tw-gradient-from: #15181E var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: rgb(21 24 30 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .dark [class*="to-[#f0f4ff]"],
+  .dark [class*="to-white"] {
+    --tw-gradient-to: #0B0D10 var(--tw-gradient-to-position) !important;
+  }
+
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: #15181E;
+    color: #F8FAFC;
+    border-color: #2A303A;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: rgba(248, 250, 252, 0.38);
   }
 }
 

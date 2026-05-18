@@ -6,6 +6,7 @@ import { Menu, X, ArrowRight, Heart, LibraryBig, CreditCard } from "lucide-react
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 type PlanLabel = "Découverte" | "Basic" | "Pro"
 
@@ -214,6 +215,7 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <ThemeToggle />
           {isAuthenticated ? (
             <>
               <PlanBadge plan={userPlan} />
@@ -268,6 +270,10 @@ export function Navbar() {
                 <div className="px-4 py-2">
                   <PlanBadge plan={userPlan} />
                 </div>
+                <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-[#0F0F0F]/70">
+                  <span>Apparence</span>
+                  <ThemeToggle />
+                </div>
                 <Link
                   href="/library"
                   className="rounded-xl px-4 py-3 text-sm font-medium text-[#0F0F0F]/70 transition-all duration-300 hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] hover:translate-x-1 flex items-center gap-2"
@@ -308,6 +314,12 @@ export function Navbar() {
             >
               Tarifs
             </Link>
+            {!isAuthenticated && (
+              <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-[#0F0F0F]/70">
+                <span>Apparence</span>
+                <ThemeToggle />
+              </div>
+            )}
             {/* Lien Démo masqué en attendant la vidéo de présentation dynamique
             {!isAuthenticated && (
               <Link

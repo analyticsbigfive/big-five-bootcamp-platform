@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, Suspense, useRef } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useFavorites } from "@/hooks/use-favorites"
 import { Button } from "@/components/ui/button"
-import { Heart, Loader2, LogIn, Trash2, BookmarkCheck, ArrowLeft, FolderOpen, FolderPlus, X, Lock, Pencil, FolderInput, Share2, Globe, Link2, Check, XCircle, Sparkles, MoreHorizontal, Plus, Grid3X3, ChevronLeft } from "lucide-react"
+import { Heart, Loader2, LogIn, Trash2, BookmarkCheck, ArrowLeft, FolderOpen, FolderPlus, X, Lock, Pencil, FolderInput, Share2, Globe, Link2, Check, XCircle, Sparkles, MoreHorizontal, Grid3X3, ChevronLeft, Search, ArrowUpDown } from "lucide-react"
 import Link from "next/link"
 import { DashboardNavbar } from "@/components/dashboard/dashboard-navbar"
 import { Footer } from "@/components/footer"
@@ -108,8 +108,6 @@ function FavoritesPageContent() {
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [collections, setCollections] = useState<Collection[]>([])
   const [activeCollection, setActiveCollection] = useState<string | null>(null)
-  const [creatingCollection, setCreatingCollection] = useState(false)
-  const [addToCollectionCampaignId, setAddToCollectionCampaignId] = useState<string | null>(null)
   const [sharingCollectionId, setSharingCollectionId] = useState<string | null>(null)
   const [shareModalCollection, setShareModalCollection] = useState<Collection | null>(null)
   const [showCollectionModal, setShowCollectionModal] = useState(false)
@@ -122,6 +120,8 @@ function FavoritesPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const activeTab = searchParams.get('tab') === 'collections' ? 'collections' : 'favorites'
+  const [campaignSearch, setCampaignSearch] = useState("")
+  const [campaignSort, setCampaignSort] = useState<"recent" | "title">("recent")
 
   const isPaid = isPaidPlan(contextPlan)
 
@@ -267,7 +267,6 @@ function FavoritesPageContent() {
         toast.error("Impossible d'ajouter à la collection")
       }
     } catch { toast.error("Erreur lors de l'ajout") }
-    setAddToCollectionCampaignId(null)
   }
 
   const removeFromCollection = async (collectionId: string, campaignId: string) => {
@@ -372,7 +371,7 @@ function FavoritesPageContent() {
           </p>
           <div className="mt-6 flex gap-4">
             <Link href="/login?redirect=/favorites">
-              <Button className="bg-[#F2B33D] hover:bg-[#6b2d78]">
+              <Button className="bg-[#F2B33D] text-[#0F0F0F] hover:bg-[#E4A82F] hover:text-[#0F0F0F]">
                 <LogIn className="h-4 w-4 mr-2" />Se connecter
               </Button>
             </Link>
@@ -412,7 +411,7 @@ function FavoritesPageContent() {
               </div>
               <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                 <Link href="/subscribe?plan=basic">
-                  <Button className="w-full sm:w-auto bg-[#F2B33D] hover:bg-[#F2B33D]/90 text-black font-semibold">
+                  <Button className="w-full sm:w-auto bg-[#F2B33D] text-[#0F0F0F] hover:bg-[#E4A82F] hover:text-[#0F0F0F] font-semibold">
                     <Sparkles className="h-4 w-4 mr-2" />Passer en Basic
                   </Button>
                 </Link>
@@ -513,7 +512,7 @@ function FavoritesPageContent() {
               : "Vous n'avez pas encore de favoris. Explorez la bibliothèque et cliquez sur le \u2764\uFE0F pour sauvegarder vos campagnes préférées."}
           </p>
           <Link href="/dashboard" className="mt-6">
-            <Button className="bg-[#F2B33D] hover:bg-[#6b2d78]">
+            <Button className="bg-[#F2B33D] text-[#0F0F0F] hover:bg-[#E4A82F] hover:text-[#0F0F0F]">
               <ArrowLeft className="h-4 w-4 mr-2" />Explorer la bibliothèque
             </Button>
           </Link>
@@ -521,109 +520,225 @@ function FavoritesPageContent() {
       )
     }
 
-    // Grille de campagnes style Instagram (3 colonnes, carrées)
+    const activeCollectionMeta = activeCollection ? collections.find(c => c.id === activeCollection) : null
+    const normalizedSearch = campaignSearch.trim().toLowerCase()
+    const visibleCampaigns = [...filteredCampaigns]
+      .filter((fav) => {
+        const c = fav.campaign
+        if (!c) return false
+        if (!normalizedSearch) return true
+        return [
+          c.title,
+          c.brand,
+          c.category,
+          c.country,
+          ...(Array.isArray(c.platforms) ? c.platforms : []),
+          ...(Array.isArray(c.tags) ? c.tags : []),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(normalizedSearch)
+      })
+      .sort((a, b) => {
+        if (campaignSort === "title") {
+          return (a.campaign?.title || "").localeCompare(b.campaign?.title || "", "fr")
+        }
+        const bDate = new Date(b.campaign?.created_at || 0).getTime()
+        const aDate = new Date(a.campaign?.created_at || 0).getTime()
+        return bDate - aDate
+      })
+
     return (
-      <>
-        <p className="text-sm text-muted-foreground mb-4">
-          <BookmarkCheck className="h-4 w-4 inline mr-1" />
-          {filteredCampaigns.length} campagne{filteredCampaigns.length > 1 ? 's' : ''}
-          {activeCollection && collections.find(c => c.id === activeCollection) && (
-            <span className="ml-1">dans « {collections.find(c => c.id === activeCollection)?.name} »</span>
-          )}
-        </p>
-        <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 sm:gap-1">
-          {filteredCampaigns.map((fav) => {
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-[#E8EDF2] bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#0F0F0F]">
+                <BookmarkCheck className="h-4 w-4 text-[#F2B33D]" />
+                {filteredCampaigns.length} campagne{filteredCampaigns.length > 1 ? 's' : ''}
+                {activeCollectionMeta && (
+                  <span className="text-[#0F0F0F]/50">dans « {activeCollectionMeta.name} »</span>
+                )}
+              </p>
+              <p className="mt-1 text-xs text-[#0F0F0F]/50">
+                {visibleCampaigns.length} visible{visibleCampaigns.length > 1 ? 's' : ''}
+              </p>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px] lg:w-[560px]">
+              <label className="relative block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0F0F0F]/35" />
+                <input
+                  type="search"
+                  aria-label={activeCollection ? "Rechercher dans la collection" : "Rechercher dans les favoris"}
+                  value={campaignSearch}
+                  onChange={(event) => setCampaignSearch(event.target.value)}
+                  placeholder={activeCollection ? "Rechercher dans la collection" : "Rechercher un favori"}
+                  className="h-10 w-full rounded-lg border border-[#E8EDF2] bg-[#F8FAFC] pl-9 pr-3 text-sm text-[#0F0F0F] outline-none transition-colors placeholder:text-[#0F0F0F]/35 focus:border-[#F2B33D] focus:bg-white"
+                />
+              </label>
+              <label className="relative block">
+                <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0F0F0F]/35" />
+                <select
+                  aria-label="Trier les campagnes"
+                  value={campaignSort}
+                  onChange={(event) => setCampaignSort(event.target.value as "recent" | "title")}
+                  className="h-10 w-full appearance-none rounded-lg border border-[#E8EDF2] bg-[#F8FAFC] pl-9 pr-3 text-sm font-medium text-[#0F0F0F] outline-none transition-colors focus:border-[#F2B33D] focus:bg-white"
+                >
+                  <option value="recent">Plus récentes</option>
+                  <option value="title">Titre A-Z</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {visibleCampaigns.length === 0 ? (
+          <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#DCE4EC] bg-white p-8 text-center">
+            <Search className="h-9 w-9 text-[#F2B33D]/70" />
+            <h3 className="mt-4 text-lg font-bold text-[#0F0F0F]">Aucun résultat</h3>
+            <p className="mt-2 max-w-md text-sm text-[#0F0F0F]/55">
+              Aucune campagne ne correspond à cette recherche.
+            </p>
+            {campaignSearch && (
+              <Button
+                variant="outline"
+                className="mt-5 border-[#E8EDF2] hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                onClick={() => setCampaignSearch("")}
+              >
+                Effacer la recherche
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {visibleCampaigns.map((fav) => {
             const c = fav.campaign!
             const isRemoving = removingId === fav.campaign_id
             return (
-              <div key={fav.id} className={cn(
-                "group relative aspect-square overflow-hidden bg-gradient-to-br from-[#0A1F44] to-[#1a3a6e]",
-                isRemoving && "opacity-50 scale-95"
+              <article key={fav.id} className={cn(
+                "overflow-hidden rounded-2xl border border-[#E8EDF2] bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#F2B33D]/40 hover:shadow-md",
+                isRemoving && "opacity-50"
               )}>
-                <Link href={`/content/${c.slug || c.id}`}>
+                <Link href={`/content/${c.slug || c.id}`} className="group relative block aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#0A1F44] to-[#1a3a6e]">
                   {c.thumbnail ? (
-                    <Image src={getGoogleDriveImageUrl(c.thumbnail)} alt={c.title} fill className="object-cover transition-transform duration-300 group-hover:scale-105" />
+                    <Image
+                      src={getGoogleDriveImageUrl(c.thumbnail)}
+                      alt={c.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center">
                       <span className="text-3xl font-bold text-white/20">{c.title.substring(0, 2).toUpperCase()}</span>
                     </div>
                   )}
-                  {/* Overlay au hover */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-end">
-                    <div className="w-full p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
-                      <p className="text-white text-sm font-semibold line-clamp-2 drop-shadow-lg">{c.title}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {c.platforms?.[0] && (
-                          <span className="text-white/80 text-xs">{c.platforms[0]}</span>
-                        )}
-                        {c.category && (
-                          <span className="text-white/60 text-xs">· {c.category}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
                 </Link>
 
-                {/* Boutons d'action (coin supérieur droit, au hover) */}
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {isPaid && collections.length > 0 && !activeCollection && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70 transition-colors">
-                          <FolderInput className="h-3.5 w-3.5" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Ajouter à...</p>
-                        {collections.map((col) => {
-                          const isIn = col.campaign_ids.includes(fav.campaign_id)
-                          return (
-                            <DropdownMenuItem
-                              key={col.id}
-                              onClick={() => isIn
-                                ? removeFromCollection(col.id, fav.campaign_id)
-                                : addToCollection(col.id, fav.campaign_id)
-                              }
-                              className={cn(isIn && "text-[#F2B33D] font-semibold")}
-                            >
-                              <FolderOpen className="h-3.5 w-3.5 mr-2" />
-                              <span className="truncate">{col.name}</span>
-                              {isIn && <Check className="h-3 w-3 ml-auto" />}
-                            </DropdownMenuItem>
-                          )
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  {activeCollection ? (
-                    <button
-                      onClick={() => removeFromCollection(activeCollection, fav.campaign_id)}
-                      disabled={isRemoving}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-red-500/80 transition-colors"
-                      title="Retirer de la collection"
+                <div className="p-4">
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[#0F0F0F]/55">
+                    {Array.isArray(c.platforms) && c.platforms[0] && (
+                      <span className="rounded-full bg-[#F4F8FB] px-2 py-1 font-medium">{c.platforms[0]}</span>
+                    )}
+                    {c.category && (
+                      <span className="rounded-full bg-[#F4F8FB] px-2 py-1 font-medium">{c.category}</span>
+                    )}
+                  </div>
+
+                  <Link href={`/content/${c.slug || c.id}`}>
+                    <h3 className="line-clamp-2 min-h-[2.5rem] text-base font-bold leading-snug text-[#0F0F0F] transition-colors hover:text-[#B8850A]">
+                      {c.title}
+                    </h3>
+                  </Link>
+                  <p className="mt-1 line-clamp-1 text-sm text-[#0F0F0F]/55">
+                    {c.brand || c.country || "Campagne sauvegardée"}
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "border-[#E8EDF2] hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]",
+                        !activeCollection && (!isPaid || collections.length === 0) && "col-span-2"
+                      )}
                     >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleRemove(fav.campaign_id)}
-                      disabled={isRemoving}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-red-500/80 transition-colors"
-                      title="Retirer des favoris"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                      <Link href={`/content/${c.slug || c.id}`}>Ouvrir</Link>
+                    </Button>
+
+                    {isPaid && collections.length > 0 && !activeCollection && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-[#E8EDF2] hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                          >
+                            <FolderInput className="h-3.5 w-3.5" />
+                            Classer
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Ajouter à...</p>
+                          {collections.map((col) => {
+                            const isIn = col.campaign_ids.includes(fav.campaign_id)
+                            return (
+                              <DropdownMenuItem
+                                key={col.id}
+                                onClick={() => isIn
+                                  ? removeFromCollection(col.id, fav.campaign_id)
+                                  : addToCollection(col.id, fav.campaign_id)
+                                }
+                                className={cn(isIn && "text-[#B8850A] font-semibold")}
+                              >
+                                <FolderOpen className="h-3.5 w-3.5 mr-2" />
+                                <span className="truncate">{col.name}</span>
+                                {isIn && <Check className="h-3 w-3 ml-auto" />}
+                              </DropdownMenuItem>
+                            )
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+
+                    {activeCollection ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeFromCollection(activeCollection, fav.campaign_id)}
+                        disabled={isRemoving}
+                        className="border-red-100 text-red-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Retirer
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemove(fav.campaign_id)}
+                        disabled={isRemoving}
+                        className="col-span-2 border-red-100 text-red-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                      >
+                        {isRemoving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                        Retirer des favoris
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </article>
             )
-          })}
-        </div>
-      </>
+            })}
+          </div>
+        )}
+      </div>
     )
   }
 
-  // ─── Rendu : grille de collections style Instagram ────────────────
+  // ─── Rendu : grille de collections ────────────────
 
   const renderCollectionsGrid = () => {
     if (!isPaid) {
@@ -637,7 +752,7 @@ function FavoritesPageContent() {
             Les collections vous permettent d&apos;organiser vos campagnes favorites dans des collections thématiques et de les partager.
           </p>
           <Link href="/pricing" className="mt-6">
-            <Button className="bg-[#F2B33D] hover:bg-[#6b2d78]">
+            <Button className="bg-[#F2B33D] text-[#0F0F0F] hover:bg-[#E4A82F] hover:text-[#0F0F0F]">
               <Sparkles className="h-4 w-4 mr-2" />Voir les plans
             </Button>
           </Link>
@@ -655,78 +770,222 @@ function FavoritesPageContent() {
           <p className="mt-2 text-muted-foreground max-w-md">
             Créez votre première collection pour organiser vos campagnes favorites par thème.
           </p>
-          <Button className="mt-6 bg-[#F2B33D] hover:bg-[#6b2d78]" onClick={() => { setEditingCollection(null); setShowCollectionModal(true) }}>
+          <Button className="mt-6 bg-[#F2B33D] text-[#0F0F0F] hover:bg-[#E4A82F] hover:text-[#0F0F0F]" onClick={() => { setEditingCollection(null); setShowCollectionModal(true) }}>
             <FolderPlus className="h-4 w-4 mr-2" />Créer une collection
           </Button>
         </div>
       )
     }
 
-    // Grille Instagram : 2 colonnes sur mobile, 3 sur tablette
     return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {collections.map((col) => (
-          <div key={col.id} className="group">
-            {/* Cover mosaïque cliquable */}
-            <button
-              type="button"
-              onClick={() => setActiveCollection(col.id)}
-              className="w-full text-left"
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-[#E8EDF2] bg-white p-4 shadow-sm">
+          <div>
+            <h2 className="text-lg font-bold text-[#0F0F0F]">Collections</h2>
+            <p className="mt-1 text-sm text-[#0F0F0F]/55">
+              {collections.length} collection{collections.length > 1 ? 's' : ''} · {collections.reduce((sum, col) => sum + col.item_count, 0)} campagne{collections.reduce((sum, col) => sum + col.item_count, 0) > 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {collections.map((col) => (
+            <article
+              key={col.id}
+              className="rounded-2xl border border-[#E8EDF2] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#F2B33D]/40 hover:shadow-md"
             >
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveCollection(col.id)}
+                  className="h-24 w-24 shrink-0 overflow-hidden rounded-xl text-left"
+                  aria-label={`Ouvrir ${col.name}`}
+                >
+                  <CollectionCover
+                    thumbnails={collectionThumbnails[col.id] || []}
+                    name={col.name}
+                  />
+                </button>
+
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveCollection(col.id)}
+                    className="block w-full text-left"
+                  >
+                    <h3 className="truncate text-base font-bold text-[#0F0F0F] transition-colors hover:text-[#B8850A]">
+                      {col.name}
+                    </h3>
+                  </button>
+                  <p className="mt-1 text-sm text-[#0F0F0F]/55">
+                    {col.item_count} campagne{col.item_count !== 1 ? 's' : ''}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="inline-flex items-center rounded-full bg-[#F4F8FB] px-2 py-1 text-xs font-medium text-[#0F0F0F]/60">
+                      <FolderOpen className="mr-1 h-3 w-3" />
+                      Dossier
+                    </span>
+                    {col.is_shared && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                        <Globe className="mr-1 h-3 w-3" />
+                        Partagé
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-[#E8EDF2] hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                  onClick={() => setActiveCollection(col.id)}
+                >
+                  Ouvrir
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-[#E8EDF2] hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                  onClick={() => openShareModal(col)}
+                  disabled={sharingCollectionId === col.id}
+                >
+                  {sharingCollectionId === col.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+                  Partager
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="col-span-2 border-[#E8EDF2] hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                      Options
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => {
+                      setEditingCollection({ id: col.id, name: col.name })
+                      setShowCollectionModal(true)
+                    }}>
+                      <Pencil className="h-3.5 w-3.5 mr-2" />
+                      Renommer
+                    </DropdownMenuItem>
+                    {col.is_shared && (
+                      <DropdownMenuItem onClick={() => revokeShare(col.id)} className="text-orange-500">
+                        <XCircle className="h-3.5 w-3.5 mr-2" />
+                        Révoquer le partage
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => deleteCollection(col.id)} className="text-red-500 focus:text-red-500">
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Supprimer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Rendu : vue détail d'une collection ─────────
+
+  const renderCollectionDetail = () => {
+    const col = collections.find(c => c.id === activeCollection)
+    if (!col) return null
+
+    return (
+      <div>
+        <div className="mb-5 rounded-2xl border border-[#E8EDF2] bg-white p-4 shadow-sm sm:p-5">
+          <button
+            type="button"
+            onClick={() => setActiveCollection(null)}
+            className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#0F0F0F]/60 transition-colors hover:text-[#0F0F0F]"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Collections
+          </button>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-[#E8EDF2]">
               <CollectionCover
-                thumbnails={collectionThumbnails[col.id] || []}
+                thumbnails={(collectionThumbnails[col.id] || []).slice(0, 3)}
                 name={col.name}
               />
-            </button>
+            </div>
 
-            {/* Infos sous la cover */}
-            <div className="mt-2 flex items-start justify-between gap-1">
-              <button
-                type="button"
-                onClick={() => setActiveCollection(col.id)}
-                className="min-w-0 text-left"
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-2xl font-bold tracking-tight text-[#0F0F0F]">
+                {col.name}
+              </h2>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#0F0F0F]/55">
+                <span>{col.item_count} campagne{col.item_count !== 1 ? 's' : ''}</span>
+                {col.is_shared && (
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                    <Globe className="mr-1 h-3 w-3" />
+                    Partagé
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:w-auto">
+              <Button
+                variant="outline"
+                className="border-[#E8EDF2] hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                onClick={() => {
+                  setEditingCollection({ id: col.id, name: col.name })
+                  setShowCollectionModal(true)
+                }}
               >
-                <h3 className="text-sm font-semibold text-[#0F0F0F] truncate leading-tight">
-                  {col.name}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {col.item_count} élément{col.item_count !== 1 ? 's' : ''}
-                  {col.is_shared && (
-                    <span className="ml-1 text-emerald-500">· Partagé</span>
-                  )}
-                </p>
-              </button>
-
-              {/* Menu contextuel (trois points) */}
+                <Pencil className="h-4 w-4" />
+                Renommer
+              </Button>
+              <Button
+                variant="outline"
+                className="border-[#E8EDF2] hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]"
+                onClick={() => openShareModal(col)}
+                disabled={sharingCollectionId === col.id}
+              >
+                {sharingCollectionId === col.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                Partager
+              </Button>
+              {col.is_shared && (
+                <Button
+                  variant="outline"
+                  className="border-orange-100 text-orange-600 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                  onClick={() => revokeShare(col.id)}
+                >
+                  <XCircle className="h-4 w-4" />
+                  Révoquer
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[#0F0F0F]/40 hover:text-[#0F0F0F] hover:bg-[#F5F5F5]/50 transition-colors"
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "border-[#E8EDF2] hover:border-[#F2B33D]/50 hover:bg-[#FFF6E3] hover:text-[#0F0F0F]",
+                      !col.is_shared && "col-span-2"
+                    )}
                   >
                     <MoreHorizontal className="h-4 w-4" />
-                  </button>
+                    Plus
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => {
-                    setEditingCollection({ id: col.id, name: col.name })
-                    setShowCollectionModal(true)
-                  }}>
-                    <Pencil className="h-3.5 w-3.5 mr-2" />
-                    Renommer
+                  <DropdownMenuItem onClick={() => setActiveCollection(null)}>
+                    <Grid3X3 className="h-3.5 w-3.5 mr-2" />
+                    Toutes les collections
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => openShareModal(col)}
-                    disabled={sharingCollectionId === col.id}
-                  >
-                    <Share2 className="h-3.5 w-3.5 mr-2" />
-                    Partager
-                  </DropdownMenuItem>
-                  {col.is_shared && (
-                    <DropdownMenuItem onClick={() => revokeShare(col.id)} className="text-orange-500">
-                      <XCircle className="h-3.5 w-3.5 mr-2" />
-                      Révoquer le partage
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => deleteCollection(col.id)} className="text-red-500 focus:text-red-500">
                     <Trash2 className="h-3.5 w-3.5 mr-2" />
@@ -735,97 +994,6 @@ function FavoritesPageContent() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
-        ))}
-
-        {/* Bouton + nouvelle collection */}
-        <button
-          type="button"
-          onClick={() => { setEditingCollection(null); setShowCollectionModal(true) }}
-          className="flex aspect-square w-full flex-col items-center justify-center rounded-sm border-2 border-dashed border-[#F5F5F5] bg-white/50 text-center transition-all hover:bg-[#F2B33D]/5 hover:border-[#F2B33D]/40"
-        >
-          <Plus className="h-8 w-8 text-[#F2B33D]/30 mb-1" />
-          <span className="text-xs font-medium text-[#F2B33D]/60">Nouvelle</span>
-        </button>
-      </div>
-    )
-  }
-
-  // ─── Rendu : vue détail d'une collection (style Instagram) ─────────
-
-  const renderCollectionDetail = () => {
-    const col = collections.find(c => c.id === activeCollection)
-    if (!col) return null
-
-    return (
-      <div>
-        {/* Header collection style Instagram */}
-        <div className="mb-6">
-          {/* Bouton retour */}
-          <button
-            type="button"
-            onClick={() => setActiveCollection(null)}
-            className="flex items-center gap-1.5 text-sm font-medium text-[#0F0F0F]/60 hover:text-[#0F0F0F] transition-colors mb-4"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Collections
-          </button>
-
-          <div className="flex items-center gap-4">
-            {/* Mini cover */}
-            <div className="h-16 w-16 shrink-0 rounded-lg overflow-hidden border border-[#F5F5F5]">
-              <CollectionCover
-                thumbnails={(collectionThumbnails[col.id] || []).slice(0, 3)}
-                name={col.name}
-              />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-[#0F0F0F] truncate">
-                  {col.name}
-                </h2>
-                {col.is_shared && (
-                  <Globe className="h-4 w-4 text-emerald-500 shrink-0" />
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {col.item_count} campagne{col.item_count !== 1 ? 's' : ''}
-              </p>
-            </div>
-
-            {/* Actions */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0">
-                  <MoreHorizontal className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => {
-                  setEditingCollection({ id: col.id, name: col.name })
-                  setShowCollectionModal(true)
-                }}>
-                  <Pencil className="h-3.5 w-3.5 mr-2" />
-                  Renommer
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openShareModal(col)}>
-                  <Share2 className="h-3.5 w-3.5 mr-2" />
-                  Partager
-                </DropdownMenuItem>
-                {col.is_shared && (
-                  <DropdownMenuItem onClick={() => revokeShare(col.id)} className="text-orange-500">
-                    <XCircle className="h-3.5 w-3.5 mr-2" />
-                    Révoquer le partage
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => deleteCollection(col.id)} className="text-red-500 focus:text-red-500">
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Supprimer
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 
@@ -942,7 +1110,7 @@ function FavoritesPageContent() {
                   <button
                     type="button"
                     onClick={() => { navigator.clipboard.writeText(shareUrl); toast.success("Lien copié !"); setShareModalCollection(null) }}
-                    className="flex items-center gap-1.5 rounded-lg bg-[#F2B33D] px-3 py-2 text-xs font-semibold text-white hover:bg-[#6b2d78] transition-colors"
+                    className="flex items-center gap-1.5 rounded-lg bg-[#F2B33D] px-3 py-2 text-xs font-semibold text-[#0F0F0F] transition-colors hover:bg-[#E4A82F] hover:text-[#0F0F0F]"
                   >
                     <Link2 className="h-3.5 w-3.5" />
                     Copier
@@ -966,35 +1134,56 @@ function FavoritesPageContent() {
       </Dialog>
 
       <main className="flex-1">
-        <div className="container mx-auto max-w-4xl px-4 pb-12 pt-8">
+        <div className="container mx-auto max-w-7xl px-4 pb-12 pt-8">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl shadow-lg ${
-                activeTab === 'collections'
-                  ? 'bg-[#F2B33D] shadow-[#F2B33D]/20'
-                  : 'bg-gradient-to-br from-red-500 to-[#F2B33D] shadow-red-500/20'
-              }`}>
-                {activeTab === 'collections'
-                  ? <Grid3X3 className="h-5 w-5 text-white" />
-                  : <Heart className="h-5 w-5 text-white fill-white" />
-                }
+          <div className="mb-6 rounded-2xl border border-[#E8EDF2] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-xl shadow-sm",
+                  activeTab === 'collections'
+                    ? 'bg-[#F2B33D] text-[#0F0F0F] shadow-[#F2B33D]/20'
+                    : 'bg-[#0F0F0F] text-white shadow-[#0F0F0F]/10'
+                )}>
+                  {activeTab === 'collections'
+                    ? <Grid3X3 className="h-5 w-5" />
+                    : <Heart className="h-5 w-5 fill-white" />
+                  }
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight text-[#0F0F0F] sm:text-3xl">
+                    {activeTab === 'collections' ? 'Collections' : 'Favoris'}
+                  </h1>
+                  <p className="mt-1 text-sm text-[#0F0F0F]/55">
+                    {activeTab === 'collections'
+                      ? `${collections.length} collection${collections.length > 1 ? 's' : ''}`
+                      : `${campaigns.length} campagne${campaigns.length > 1 ? 's' : ''} sauvegardée${campaigns.length > 1 ? 's' : ''}`}
+                  </p>
+                </div>
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-[#0F0F0F]">
-                {activeTab === 'collections' ? 'Collections' : 'Favoris'}
-              </h1>
+
+              {activeTab === 'collections' && isPaid && !activeCollection && (
+                <Button
+                  className="bg-[#F2B33D] text-[#0F0F0F] hover:bg-[#E4A82F] hover:text-[#0F0F0F]"
+                  onClick={() => { setEditingCollection(null); setShowCollectionModal(true) }}
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  Nouvelle collection
+                </Button>
+              )}
             </div>
 
-            {/* Onglets style Instagram (souligné) */}
-            <div className="mt-6 flex border-b border-[#F5F5F5]">
+            <div className="mt-5 inline-flex rounded-xl border border-border bg-muted p-1" role="tablist" aria-label="Favoris et collections">
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'favorites'}
                 onClick={() => { router.push('/favorites'); setActiveCollection(null) }}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-all border-b-2 -mb-px",
+                  "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
                   activeTab === 'favorites'
-                    ? "border-[#0F0F0F] text-[#0F0F0F]"
-                    : "border-transparent text-[#0F0F0F]/40 hover:text-[#0F0F0F]/70"
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:bg-background hover:text-foreground"
                 )}
               >
                 <Heart className="h-4 w-4" />
@@ -1002,12 +1191,14 @@ function FavoritesPageContent() {
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'collections'}
                 onClick={() => { router.push('/favorites?tab=collections'); setActiveCollection(null) }}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-all border-b-2 -mb-px",
+                  "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
                   activeTab === 'collections'
-                    ? "border-[#0F0F0F] text-[#0F0F0F]"
-                    : "border-transparent text-[#0F0F0F]/40 hover:text-[#0F0F0F]/70"
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:bg-background hover:text-foreground"
                 )}
               >
                 <Grid3X3 className="h-4 w-4" />

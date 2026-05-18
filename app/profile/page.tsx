@@ -373,7 +373,7 @@ export default function ProfilePage() {
         : "bg-[#2364d7]/10 text-[#2364d7]"
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <DashboardNavbar />
       
       {isLoading ? (
@@ -382,11 +382,11 @@ export default function ProfilePage() {
         </div>
       ) : (
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <h1 className="font-[family-name:var(--font-heading)] text-2xl font-bold text-[#0F0F0F]">Mon Profil</h1>
+        <h1 className="font-[family-name:var(--font-heading)] text-2xl font-bold text-foreground">Mon Profil</h1>
         
         {/* Account Info Section */}
-        <section className="mt-8 rounded-xl border border-[#F5F5F5] bg-white p-6 shadow-sm">
-          <h2 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-[#0F0F0F]">Informations du compte</h2>
+        <section className="mt-8 rounded-xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-card-foreground">Informations du compte</h2>
           
           <div className="mt-6 flex flex-col items-start gap-6 sm:flex-row">
             <div className="relative">
@@ -402,7 +402,7 @@ export default function ProfilePage() {
                 <img
                   src="/icons/default-avatar.svg"
                   alt={user.name}
-                  className="h-20 w-20 rounded-full bg-[#F5F5F5]"
+                  className="h-20 w-20 rounded-full bg-muted"
                 />
               )}
               <button
@@ -436,12 +436,12 @@ export default function ProfilePage() {
               )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="name" className="text-sm text-[#0F0F0F]/60">Nom complet</Label>
-                  <div className="mt-1 flex items-center gap-2 rounded-lg bg-[#F5F5F5]/20 px-3 py-2">
-                    <Lock className="h-4 w-4 text-[#0F0F0F]/40" />
-                    <p className="font-medium text-[#0F0F0F]">{user.name}</p>
+                  <Label htmlFor="name" className="text-sm text-muted-foreground">Nom complet</Label>
+                  <div className="mt-1 flex items-center gap-2 rounded-lg bg-muted/20 px-3 py-2">
+                    <Lock className="h-4 w-4 text-muted-foreground/40" />
+                    <p className="font-medium text-foreground">{user.name}</p>
                   </div>
-                  <p className="mt-1 text-xs text-[#0F0F0F]/40">Ce champ est en lecture seule</p>
+                  <p className="mt-1 text-xs text-muted-foreground/60">Ce champ est en lecture seule</p>
                 </div>
                 <div>
                   <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
@@ -459,13 +459,13 @@ export default function ProfilePage() {
         <section className="mt-6 rounded-xl border border-border bg-card p-6">
           <h2 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-card-foreground">Abonnement</h2>
 
-          <div className="mt-4 rounded-lg bg-[#F5F5F5]/40 p-4">
+          <div className="mt-4 rounded-lg bg-muted/40 p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white border border-[#F5F5F5]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card border border-border">
                 {user.status === "subscribed" ? (
-                  <Check className="h-5 w-5 text-[#0F0F0F]/60" />
+                  <Check className="h-5 w-5 text-muted-foreground" />
                 ) : (
-                  <CreditCard className="h-5 w-5 text-[#0F0F0F]/60" />
+                  <CreditCard className="h-5 w-5 text-muted-foreground" />
                 )}
               </div>
               <div className="flex-1">
@@ -498,16 +498,16 @@ export default function ProfilePage() {
 
             {/* Plan programmé (downgrade payé d'avance, activé à expiration). */}
             {user.pendingPlan && user.pendingStartsAt && (
-              <div className="mt-4 rounded-lg border border-[#F2B33D]/30 bg-[#FFFBEC] p-3">
+              <div className="mt-4 rounded-lg border border-[#F2B33D]/30 bg-amber-50 dark:bg-amber-950/30 p-3">
                 <div className="flex items-start gap-2">
                   <RefreshCw className="h-4 w-4 text-[#a17320] mt-0.5 shrink-0" />
                   <div className="text-sm">
-                    <p className="font-semibold text-[#0F0F0F]">
+                    <p className="font-semibold text-foreground">
                       Prochain plan : {user.pendingPlan}
                     </p>
-                    <p className="mt-0.5 text-[#0F0F0F]/70">
+                    <p className="mt-0.5 text-muted-foreground">
                       Activation le{" "}
-                      <span className="font-semibold text-[#0F0F0F]">
+                        <span className="font-semibold text-foreground">
                         {format(new Date(user.pendingStartsAt), "d MMMM yyyy", { locale: fr })}
                       </span>
                       {user.pendingDurationDays
@@ -533,7 +533,7 @@ export default function ProfilePage() {
 
         {/* Activité mensuelle — appliquée aux 3 plans */}
         <section className="mt-6 rounded-xl border border-[#F2B33D]/20 bg-gradient-to-br from-[#F2B33D]/5 to-[#a855f7]/5 p-6">
-          <h2 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-[#0F0F0F] flex items-center gap-2">
+          <h2 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-foreground flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-[#F2B33D]" />
             Votre activité du mois
           </h2>
@@ -547,8 +547,8 @@ export default function ProfilePage() {
               </span>
             )}
             <div className="mb-2">
-              <p className="text-base font-semibold text-[#0F0F0F]">campagnes explorées</p>
-              <p className="text-sm text-[#0F0F0F]/60">· réinitialise chaque mois</p>
+              <p className="text-base font-semibold text-foreground">campagnes explorées</p>
+              <p className="text-sm text-muted-foreground">· réinitialise chaque mois</p>
             </div>
           </div>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#F2B33D]/20">
@@ -557,13 +557,13 @@ export default function ProfilePage() {
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <p className="mt-2 text-xs text-[#0F0F0F]/50">
+          <p className="mt-2 text-xs text-muted-foreground">
             {isUnlimited
               ? "Ce compteur suit vos consultations de campagnes du mois en cours. Votre plan inclut un accès illimité."
               : "Ce compteur suit vos consultations de campagnes du mois en cours."}
           </p>
           {!isUnlimited && monthlyUsage >= monthlyClickLimit && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-3 py-2">
               <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
               <p className="text-xs text-red-700">
                 Limite mensuelle atteinte. <Link href="/pricing" className="font-semibold underline">Passez à un plan supérieur</Link> pour continuer à explorer.
@@ -581,7 +581,7 @@ export default function ProfilePage() {
               size="sm"
               onClick={handleRefreshHistory}
               disabled={isRefreshingHistory}
-              className="bg-white border-[#F5F5F5] text-[#0F0F0F]"
+              className="bg-background border-border text-foreground"
             >
               {isRefreshingHistory ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -685,7 +685,7 @@ export default function ProfilePage() {
               size="sm"
               onClick={handleRefreshSearches}
               disabled={isRefreshingSearches}
-              className="bg-white border-[#F5F5F5] text-[#0F0F0F]"
+              className="bg-background border-border text-foreground"
             >
               {isRefreshingSearches ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               <span className="ml-2">Actualiser</span>
@@ -712,12 +712,12 @@ export default function ProfilePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <SearchIcon className="h-4 w-4 text-[#0F0F0F]/40 shrink-0" />
+                            <SearchIcon className="h-4 w-4 text-muted-foreground/60 shrink-0" />
                             <p className="text-sm font-medium text-foreground truncate">
                               {log.query ? `« ${log.query} »` : <span className="italic text-muted-foreground">Recherche par filtres</span>}
                             </p>
                             {log.source && (
-                              <span className="rounded-full bg-[#F5F5F5] px-2 py-0.5 text-[10px] font-medium text-[#0F0F0F]/60">
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                                 {log.source === "bar" ? "Barre" : log.source === "filter" ? "Filtre" : log.source}
                               </span>
                             )}
@@ -766,7 +766,7 @@ export default function ProfilePage() {
 
           <form onSubmit={handleChangePassword} className="mt-4 space-y-3 max-w-md">
             <div>
-              <Label htmlFor="pwd-current" className="text-sm text-[#0F0F0F]/70">Mot de passe actuel</Label>
+              <Label htmlFor="pwd-current" className="text-sm text-muted-foreground">Mot de passe actuel</Label>
               <Input
                 id="pwd-current"
                 type={showPwd ? "text" : "password"}
@@ -777,7 +777,7 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <Label htmlFor="pwd-new" className="text-sm text-[#0F0F0F]/70">Nouveau mot de passe</Label>
+              <Label htmlFor="pwd-new" className="text-sm text-muted-foreground">Nouveau mot de passe</Label>
               <Input
                 id="pwd-new"
                 type={showPwd ? "text" : "password"}
@@ -790,7 +790,7 @@ export default function ProfilePage() {
               <p className="mt-1 text-xs text-muted-foreground">Au moins 8 caractères.</p>
             </div>
             <div>
-              <Label htmlFor="pwd-confirm" className="text-sm text-[#0F0F0F]/70">Confirmer le nouveau mot de passe</Label>
+              <Label htmlFor="pwd-confirm" className="text-sm text-muted-foreground">Confirmer le nouveau mot de passe</Label>
               <Input
                 id="pwd-confirm"
                 type={showPwd ? "text" : "password"}
@@ -803,7 +803,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => setShowPwd((v) => !v)}
-              className="flex items-center gap-1 text-xs text-[#0F0F0F]/60 hover:text-[#0F0F0F]"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
               {showPwd ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
               {showPwd ? "Masquer" : "Afficher"} les mots de passe

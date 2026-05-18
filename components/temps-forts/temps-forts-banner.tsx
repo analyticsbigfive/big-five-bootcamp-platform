@@ -107,28 +107,28 @@ export function TempsFortsBanner({ tempsFort, className }: TempsFortsBannerProps
               className="object-cover transition-opacity duration-500"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#FFF4D6] via-[#FFF4D6]/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#FFF4D6] via-[#FFF4D6]/50 to-transparent dark:from-card dark:via-card/50" />
           </div>
 
           <div
             key={current.id}
             className="relative flex min-h-56 flex-col justify-center gap-5 px-6 py-7 transition-opacity duration-500 sm:px-8 md:max-w-[62%]"
           >
-            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-[#0F0F0F] shadow-sm">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-card px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-card-foreground shadow-sm">
               <Sparkles className="h-3.5 w-3.5 text-[#F2B33D]" />
               Temps fort
               {hasMultiple && (
-                <span className="ml-1 text-[#0F0F0F]/55">
+                <span className="ml-1 text-muted-foreground">
                   {index + 1} / {slides.length}
                 </span>
               )}
             </div>
 
             <div>
-              <h2 className="font-[family-name:var(--font-heading)] text-3xl font-extrabold leading-tight text-[#0F0F0F] sm:text-4xl">
+              <h2 className="font-[family-name:var(--font-heading)] text-3xl font-extrabold leading-tight text-foreground sm:text-4xl">
                 {current.title}
               </h2>
-              <p className="mt-2 max-w-2xl text-base font-medium leading-relaxed text-[#0F0F0F]/75">
+              <p className="mt-2 max-w-2xl text-base font-medium leading-relaxed text-foreground/75">
                 {current.description}
               </p>
             </div>
@@ -147,7 +147,7 @@ export function TempsFortsBanner({ tempsFort, className }: TempsFortsBannerProps
                 type="button"
                 onClick={goPrev}
                 aria-label="Temps fort précédent"
-                className="absolute left-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#0F0F0F] shadow-sm transition hover:bg-white sm:flex"
+                className="absolute left-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-card-foreground shadow-sm transition hover:bg-card sm:flex"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -155,7 +155,7 @@ export function TempsFortsBanner({ tempsFort, className }: TempsFortsBannerProps
                 type="button"
                 onClick={goNext}
                 aria-label="Temps fort suivant"
-                className="absolute right-16 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#0F0F0F] shadow-sm transition hover:bg-white sm:flex"
+                className="absolute right-16 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-card-foreground shadow-sm transition hover:bg-card sm:flex"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -168,7 +168,7 @@ export function TempsFortsBanner({ tempsFort, className }: TempsFortsBannerProps
                     onClick={() => setIndex(i)}
                     aria-label={`Aller au temps fort ${i + 1}`}
                     className={`h-1.5 rounded-full transition-all ${
-                      i === index ? "w-6 bg-[#0F0F0F]" : "w-2 bg-[#0F0F0F]/30 hover:bg-[#0F0F0F]/50"
+                      i === index ? "w-6 bg-foreground" : "w-2 bg-foreground/30 hover:bg-foreground/50"
                     }`}
                   />
                 ))}
@@ -179,7 +179,7 @@ export function TempsFortsBanner({ tempsFort, className }: TempsFortsBannerProps
           <button
             type="button"
             onClick={closeBanner}
-            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#0F0F0F] shadow-sm transition hover:bg-[#F5F5F5]"
+            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-card text-card-foreground shadow-sm transition hover:bg-muted"
             aria-label="Fermer la bannière temps fort"
           >
             <X className="h-4 w-4" />

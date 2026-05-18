@@ -66,16 +66,16 @@ export default function PricingPage() {
     }
 
     return (
-        <div className="flex min-h-screen flex-col bg-white">
+        <div className="flex min-h-screen flex-col bg-background">
             <Navbar />
             <main className="flex-1">
                 {/* Hero */}
-                <section className="relative py-16 lg:py-28 overflow-hidden bg-gradient-to-b from-[#F5F5F5] to-white">
+                <section className="relative py-16 lg:py-28 overflow-hidden bg-background">
                     <div className="container relative mx-auto px-4 flex flex-col items-center">
-                        <h1 className="font-[family-name:var(--font-heading)] text-3xl sm:text-4xl lg:text-6xl font-extrabold tracking-tight mb-4 sm:mb-6 text-[#0F0F0F]">
+                        <h1 className="font-[family-name:var(--font-heading)] text-3xl sm:text-4xl lg:text-6xl font-extrabold tracking-tight mb-4 sm:mb-6 text-foreground">
                             {pricingContent.hero.title} <br className="hidden sm:block" /> <span className="text-[#F2B33D]">{pricingContent.hero.titleHighlight}</span>
                         </h1>
-                        <p className="text-base sm:text-lg text-[#0F0F0F]/70 max-w-2xl mx-auto mb-8 text-center">
+                        <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 text-center">
                             {pricingContent.hero.subtitle}
                         </p>
 
@@ -83,7 +83,7 @@ export default function PricingPage() {
                         <div className="flex items-center justify-center gap-3">
                             <span className={cn(
                                 "text-sm font-semibold transition-colors",
-                                !isAnnual ? "text-[#0F0F0F]" : "text-[#0F0F0F]/50"
+                                !isAnnual ? "text-foreground" : "text-muted-foreground"
                             )}>
                                 {pricingContent.toggle.monthly}
                             </span>
@@ -93,7 +93,7 @@ export default function PricingPage() {
                                 onClick={() => setIsAnnual(!isAnnual)}
                                 className={cn(
                                     "relative inline-flex h-7 w-[52px] items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#F2B33D]/50 focus:ring-offset-2",
-                                    isAnnual ? "bg-[#F2B33D]" : "bg-[#F5F5F5]"
+                                    isAnnual ? "bg-[#F2B33D]" : "bg-muted"
                                 )}
                                 role="switch"
                                 aria-checked={isAnnual ? "true" : "false"}
@@ -108,7 +108,7 @@ export default function PricingPage() {
                             </button>
                             <span className={cn(
                                 "text-sm font-semibold transition-colors",
-                                isAnnual ? "text-[#0F0F0F]" : "text-[#0F0F0F]/50"
+                                isAnnual ? "text-foreground" : "text-muted-foreground"
                             )}>
                                 {pricingContent.toggle.annual}
                             </span>
@@ -130,7 +130,7 @@ export default function PricingPage() {
                                     key={plan.key}
                                     className={cn(
                                         "relative rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]",
-                                        "bg-[#FAF6EE] border border-[#EADFC8]",
+                                        "bg-card border border-border",
                                         plan.highlighted && "shadow-xl lg:-translate-y-4"
                                     )}
                                 >
@@ -140,10 +140,10 @@ export default function PricingPage() {
                                         </div>
                                     )}
                                     <div className={cn("mb-4 sm:mb-6", plan.badge && "mt-2")}>
-                                        <h3 className="font-bold text-xxl mb-1 sm:mb-2 text-[#0F0F0F]">
+                                        <h3 className="font-bold text-xxl mb-1 sm:mb-2 text-card-foreground">
                                             {plan.name}
                                         </h3>
-                                        <p className="text-[#0F0F0F]/60 text-sm">{plan.description}</p>
+                                        <p className="text-muted-foreground text-sm">{plan.description}</p>
                                     </div>
                                     <div className="mb-2">
                                         {plan.monthlyPrice === -1 ? (
@@ -151,7 +151,7 @@ export default function PricingPage() {
                                         ) : (
                                             <>
                                                 <span className={cn(
-                                                    "font-bold text-[#0F0F0F]",
+                                                    "font-bold text-card-foreground",
                                                     plan.highlighted ? "text-3xl sm:text-4xl" : "text-2xl sm:text-3xl"
                                                 )}>
                                                     {isAnnual
@@ -159,12 +159,12 @@ export default function PricingPage() {
                                                         : formatPrice(plan.monthlyPrice)
                                                     }
                                                 </span>
-                                                <span className="text-[#0F0F0F]/60 ml-1 text-sm">{pricingContent.priceLabels.perMonth}</span>
+                                                <span className="text-muted-foreground ml-1 text-sm">{pricingContent.priceLabels.perMonth}</span>
                                             </>
                                         )}
                                     </div>
                                     {plan.monthlyPrice > 0 && (
-                                        <p className="text-xs text-[#0F0F0F]/50 mb-4 sm:mb-6">
+                                        <p className="text-xs text-muted-foreground mb-4 sm:mb-6">
                                             {isAnnual
                                                 ? pricingContent.priceLabels.annualBillingTemplate.replace("{amount}", formatPrice(plan.annualPrice))
                                                 : pricingContent.priceLabels.annualPerYearTemplate.replace("{amount}", formatPrice(plan.annualPrice))
@@ -182,7 +182,7 @@ export default function PricingPage() {
                                                 ? "h-12 text-base font-bold bg-[#C89B4A] hover:bg-[#b8862f] text-white shadow-md"
                                                 : plan.ctaVariant === "default"
                                                     ? "h-12 bg-[#0F0F0F] hover:bg-[#0F0F0F]/90 text-white"
-                                                    : "h-12 bg-white border border-[#EADFC8] text-[#C89B4A] hover:bg-[#F5EFE0]"
+                                                    : "h-12 bg-background border border-border text-primary hover:bg-muted"
                                         )}
                                     >
                                         {plan.ctaLink.startsWith("mailto:") ? (
@@ -195,13 +195,13 @@ export default function PricingPage() {
                                     </Button>
                                     <ul className="space-y-3 text-sm flex-1">
                                         {plan.features.map((feature) => (
-                                            <li key={feature} className={cn("flex items-start gap-2 text-[#0F0F0F]/80", plan.boldFeatures?.includes(feature) && "font-bold text-[#0F0F0F]")}>
+                                            <li key={feature} className={cn("flex items-start gap-2 text-card-foreground/80", plan.boldFeatures?.includes(feature) && "font-bold text-card-foreground")}>
                                                 <Check className="h-4 w-4 text-[#C89B4A] shrink-0 mt-0.5" />
                                                 <span>{feature}</span>
                                             </li>
                                         ))}
                                         {plan.excluded.map((feature) => (
-                                            <li key={feature} className="flex items-start gap-2 text-[#0F0F0F]/40">
+                                            <li key={feature} className="flex items-start gap-2 text-muted-foreground">
                                                 <X className="h-4 w-4 text-[#E11D48] shrink-0 mt-0.5" />
                                                 <span>{feature}</span>
                                             </li>
@@ -316,33 +316,33 @@ export default function PricingPage() {
                 </section>
 
                 {/* Tableau comparatif */}
-                <section className="py-12 sm:py-20 bg-[#F5F5F5]/20">
+                <section className="py-12 sm:py-20 bg-muted/20">
                     <div className="container mx-auto px-4 flex flex-col items-center">
                         <div className="flex flex-col items-center mb-8 sm:mb-12">
-                            <h2 className="font-[family-name:var(--font-heading)] text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0F0F0F] mb-3 text-center">
+                            <h2 className="font-[family-name:var(--font-heading)] text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-3 text-center">
                                 {pricingContent.comparison.title}
                             </h2>
-                            <p className="text-[#0F0F0F]/60 text-sm sm:text-base max-w-xl text-center">
+                            <p className="text-muted-foreground text-sm sm:text-base max-w-xl text-center">
                                 {pricingContent.comparison.subtitle}
                             </p>
                         </div>
 
                         {/* Desktop */}
                         <div className="hidden md:block max-w-5xl mx-auto">
-                            <div className="rounded-2xl border border-[#F5F5F5] bg-white shadow-lg overflow-hidden">
+                            <div className="rounded-2xl border border-border bg-card shadow-lg overflow-hidden">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b border-[#F5F5F5]">
-                                            <th className="text-left p-4 sm:p-6 text-sm font-semibold text-[#0F0F0F]/60 w-2/5">{pricingContent.comparison.tableHeader}</th>
-                                            <th className="p-4 sm:p-6 text-center text-sm font-bold text-[#0F0F0F]">Découverte</th>
-                                            <th className="p-4 sm:p-6 text-center text-sm font-bold text-[#0F0F0F]">Basic</th>
+                                        <tr className="border-b border-border">
+                                            <th className="text-left p-4 sm:p-6 text-sm font-semibold text-muted-foreground w-2/5">{pricingContent.comparison.tableHeader}</th>
+                                            <th className="p-4 sm:p-6 text-center text-sm font-bold text-card-foreground">Découverte</th>
+                                            <th className="p-4 sm:p-6 text-center text-sm font-bold text-card-foreground">Basic</th>
                                             <th className="p-4 sm:p-6 text-center text-sm font-bold text-[#F2B33D] bg-[#F2B33D]/5">Pro</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {comparisonFeatures.map((feature, idx) => (
-                                            <tr key={feature.name} className={cn("border-b border-[#F5F5F5]/50", idx % 2 === 0 ? "bg-white" : "bg-[#F5F5F5]/10")}>
-                                                <td className="p-4 sm:p-5 text-sm text-[#0F0F0F]/80 font-medium">{feature.name}</td>
+                                                <tr key={feature.name} className={cn("border-b border-border/50", idx % 2 === 0 ? "bg-card" : "bg-muted/10")}>
+                                                    <td className="p-4 sm:p-5 text-sm text-card-foreground/80 font-medium">{feature.name}</td>
                                                 {(["discovery", "basic", "pro"] as const).map((planKey) => {
                                                     const value = feature[planKey]
                                                     return (
@@ -350,7 +350,7 @@ export default function PricingPage() {
                                                             {typeof value === "boolean" ? (
                                                                 value ? <Check className="h-5 w-5 text-[#C89B4A] mx-auto" /> : <X className="h-5 w-5 text-[#E11D48] mx-auto" />
                                                             ) : (
-                                                                <span className="text-sm font-semibold text-[#0F0F0F]">{value}</span>
+                                                                <span className="text-sm font-semibold text-card-foreground">{value}</span>
                                                             )}
                                                         </td>
                                                     )
@@ -367,8 +367,8 @@ export default function PricingPage() {
                             {(["discovery", "basic", "pro"] as const).map((planKey) => {
                                 const planInfo = plans.find(p => p.key === planKey)!
                                 return (
-                                    <div key={planKey} className={cn("rounded-xl border bg-white p-5 shadow-sm", planKey === "pro" ? "border-[#F2B33D] shadow-md" : "border-[#F5F5F5]")}>
-                                        <h3 className={cn("font-bold text-lg mb-3", planKey === "pro" ? "text-[#F2B33D]" : "text-[#0F0F0F]")}>{planInfo.name}</h3>
+                                    <div key={planKey} className={cn("rounded-xl border bg-card p-5 shadow-sm", planKey === "pro" ? "border-[#F2B33D] shadow-md" : "border-border")}>
+                                        <h3 className={cn("font-bold text-lg mb-3", planKey === "pro" ? "text-[#F2B33D]" : "text-card-foreground")}>{planInfo.name}</h3>
                                         <ul className="space-y-2.5">
                                             {comparisonFeatures.map((feature) => {
                                                 const value = feature[planKey]
@@ -376,7 +376,7 @@ export default function PricingPage() {
                                                 return (
                                                     <li key={feature.name} className="flex items-center gap-2.5 text-sm">
                                                         {isIncluded ? <Check className="h-4 w-4 text-[#F2B33D] shrink-0" /> : <X className="h-4 w-4 text-[#E11D48] shrink-0" />}
-                                                        <span className={cn(isIncluded ? "text-[#0F0F0F]/80" : "text-[#0F0F0F]/40")}>
+                                                        <span className={cn(isIncluded ? "text-card-foreground/80" : "text-muted-foreground")}>
                                                             {feature.name}
                                                             {typeof value === "string" && <span className="ml-1 font-semibold text-[#F2B33D]">({value})</span>}
                                                         </span>

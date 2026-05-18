@@ -103,10 +103,10 @@ export function TempsFortsPageClient() {
   // Garde abonnement : pas d'accès aux temps forts tant que l'utilisateur n'a pas de plan actif.
   if (subChecking || subLocked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-white via-white to-[#F5F5F5]/40">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#F2B33D] border-t-transparent" />
-          <p className="text-sm text-[#0F0F0F]/70">
+          <p className="text-sm text-muted-foreground">
             {subLocked ? "On prépare votre accès Laveiye…" : "Chargement…"}
           </p>
         </div>
@@ -115,7 +115,7 @@ export function TempsFortsPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-white to-[#F5F5F5]/40">
+    <div className="min-h-screen bg-background">
       <DashboardNavbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
       <div className="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:px-8">
@@ -137,7 +137,7 @@ export function TempsFortsPageClient() {
                 onClick={() => setShowMobileFilters(false)}
                 aria-label="Fermer les filtres"
               />
-              <div className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto rounded-t-2xl bg-white p-4">
+              <div className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto rounded-t-2xl bg-card p-4">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="font-[family-name:var(--font-heading)] text-lg font-bold">Tags</h2>
                   <Button variant="ghost" size="sm" onClick={() => setShowMobileFilters(false)}>
@@ -168,10 +168,10 @@ export function TempsFortsPageClient() {
             )}
             <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
-                <h1 className="font-[family-name:var(--font-heading)] text-4xl font-extrabold tracking-tight text-[#0F0F0F]">
+                <h1 className="font-[family-name:var(--font-heading)] text-4xl font-extrabold tracking-tight text-foreground">
                   Temps forts
                 </h1>
-                <p className="mt-2 text-base font-medium text-[#0F0F0F]/65">
+                <p className="mt-2 text-base font-medium text-muted-foreground">
                   Inspirez-vous des campagnes créées autour des moments clés de l'année.
                 </p>
               </div>
@@ -180,7 +180,7 @@ export function TempsFortsPageClient() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-[#F5F5F5] bg-white lg:hidden"
+                  className="border-border bg-background lg:hidden"
                   onClick={() => setShowMobileFilters(true)}
                 >
                   <Filter className="mr-2 h-4 w-4" />
@@ -191,7 +191,7 @@ export function TempsFortsPageClient() {
                   value={sortMode}
                   onChange={(event) => setSortMode(event.target.value as "recent" | "popular")}
                   aria-label="Trier les temps forts"
-                  className="h-10 rounded-xl border border-[#F5F5F5] bg-white px-4 text-sm font-semibold text-[#0F0F0F] shadow-sm outline-none transition focus:border-[#F2B33D]"
+                  className="h-10 rounded-xl border border-border bg-background px-4 text-sm font-semibold text-foreground shadow-sm outline-none transition focus:border-[#F2B33D]"
                 >
                   <option value="recent">Les plus récents</option>
                   <option value="popular">Les plus explorés</option>
@@ -202,13 +202,13 @@ export function TempsFortsPageClient() {
             <section className="mb-10">
               <div className="mb-5 flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-[family-name:var(--font-heading)] text-2xl font-extrabold text-[#0F0F0F]">
+                  <h2 className="font-[family-name:var(--font-heading)] text-2xl font-extrabold text-foreground">
                     Temps forts du moment
                   </h2>
-                  <p className="mt-1 text-sm font-medium text-[#0F0F0F]/55">
+                  <p className="mt-1 text-sm font-medium text-muted-foreground">
                   </p>
                 </div>
-                <Link href="#tous-les-temps-forts" className="hidden items-center gap-1 text-sm font-bold text-[#0F0F0F]/70 hover:text-[#F2B33D] sm:flex">
+                <Link href="#tous-les-temps-forts" className="hidden items-center gap-1 text-sm font-bold text-muted-foreground hover:text-[#F2B33D] sm:flex">
                   Voir tous les temps forts
                   <ChevronRight className="h-4 w-4" />
                 </Link>
@@ -227,10 +227,10 @@ export function TempsFortsPageClient() {
 
             <section id="tous-les-temps-forts">
               <div className="mb-5 flex items-center justify-between gap-4">
-                <h2 className="font-[family-name:var(--font-heading)] text-2xl font-extrabold text-[#0F0F0F]">
+                <h2 className="font-[family-name:var(--font-heading)] text-2xl font-extrabold text-foreground">
                   Explorez tous les temps forts
                 </h2>
-                <span className="rounded-full bg-[#F5F5F5] px-3 py-1 text-sm font-bold text-[#0F0F0F]/65">
+                <span className="rounded-full bg-muted px-3 py-1 text-sm font-bold text-muted-foreground">
                   {filteredTempsForts.length} événement{filteredTempsForts.length > 1 ? "s" : ""}
                 </span>
               </div>
@@ -266,15 +266,15 @@ function TempsFortsTagsFilters({
   return (
     <aside className={className}>
       <div className="sticky top-20">
-        <div className="mb-3 flex items-center justify-between border-b border-[#F5F5F5] pb-4">
-          <h2 className="font-[family-name:var(--font-heading)] text-base font-extrabold uppercase tracking-wide text-[#0F0F0F]">
+        <div className="mb-3 flex items-center justify-between border-b border-border pb-4">
+          <h2 className="font-[family-name:var(--font-heading)] text-base font-extrabold uppercase tracking-wide text-foreground">
             Tags
           </h2>
           {totalFilters > 0 && (
             <button
               type="button"
               onClick={onClear}
-              className="inline-flex items-center gap-1 text-xs font-bold text-[#F2B33D] hover:text-[#0F0F0F]"
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#F2B33D] hover:text-foreground"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Réinitialiser
@@ -282,7 +282,7 @@ function TempsFortsTagsFilters({
           )}
         </div>
 
-        <div className="rounded-xl border border-[#F5F5F5] bg-white p-3">
+        <div className="rounded-xl border border-border bg-card p-3">
           <div className="flex max-h-[60vh] flex-wrap gap-2 overflow-y-auto">
             {tags.map((tagOption) => {
               const active = selectedTags.includes(tagOption.name)
@@ -294,7 +294,7 @@ function TempsFortsTagsFilters({
                   className={`rounded-full border px-3 py-1.5 text-sm font-bold transition ${
                     active
                       ? "border-[#F2B33D] bg-[#F2B33D] text-white"
-                      : "border-[#F5F5F5] bg-white text-[#0F0F0F]/80 hover:border-[#F2B33D]/40 hover:text-[#0F0F0F]"
+                      : "border-border bg-card text-foreground/80 hover:border-[#F2B33D]/40 hover:text-foreground"
                   }`}
                 >
                   #{tagOption.name} ({tagOption.count})
@@ -348,8 +348,8 @@ function FeaturedTempsFortCard({ tempsFort, today }: { tempsFort: TempsFort; tod
 function TempsFortCard({ tempsFort, today }: { tempsFort: TempsFort; today: string }) {
   return (
     <Link href={`/temps-forts/${tempsFort.slug}`} className="group block">
-      <article className="overflow-hidden rounded-xl border border-[#F5F5F5] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-        <div className="relative aspect-[4/3] overflow-hidden bg-[#F5F5F5]">
+      <article className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <Image
             src={tempsFort.imageUrl}
             alt={tempsFort.shortTitle || tempsFort.title}
@@ -362,17 +362,17 @@ function TempsFortCard({ tempsFort, today }: { tempsFort: TempsFort; today: stri
           </div>
         </div>
         <div className="p-5">
-          <h3 className="font-[family-name:var(--font-heading)] text-xl font-extrabold text-[#0F0F0F]">
+          <h3 className="font-[family-name:var(--font-heading)] text-xl font-extrabold text-foreground">
             {tempsFort.shortTitle || tempsFort.title}
           </h3>
-          <p className="mt-2 text-sm font-bold text-[#0F0F0F]/60">
+          <p className="mt-2 text-sm font-bold text-muted-foreground">
             {tempsFort.campaignCount} campagne{tempsFort.campaignCount > 1 ? "s" : ""}
           </p>
           <div className="mt-4 flex items-center justify-between gap-3">
-            <span className="rounded-full bg-[#F5F5F5] px-3 py-1 text-xs font-bold text-[#0F0F0F]/75">
+            <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
               {tempsFort.category}
             </span>
-            <span className="inline-flex items-center gap-1 text-sm font-bold text-[#0F0F0F]/60">
+            <span className="inline-flex items-center gap-1 text-sm font-bold text-muted-foreground">
               <Calendar className="h-4 w-4" />
               {formatMonthYear(tempsFort.eventDate)}
             </span>
@@ -393,7 +393,7 @@ function StatusBadge({ status }: { status: "active" | "upcoming" | "past" }) {
   const className = {
     active: "bg-[#F2B33D] text-[#0F0F0F]",
     upcoming: "bg-emerald-500 text-white",
-    past: "bg-white/85 text-[#0F0F0F]",
+    past: "bg-card/85 text-foreground",
   }[status]
 
   return (
@@ -407,10 +407,10 @@ function StatusBadge({ status }: { status: "active" | "upcoming" | "past" }) {
 function EmptyState({ onClear }: { onClear: () => void }) {
   return (
     <div className="rounded-2xl border border-dashed border-[#F2B33D]/40 bg-[#F2B33D]/5 p-8 text-center">
-      <h3 className="font-[family-name:var(--font-heading)] text-xl font-extrabold text-[#0F0F0F]">
+      <h3 className="font-[family-name:var(--font-heading)] text-xl font-extrabold text-foreground">
         Aucun temps fort ne correspond à ces tags
       </h3>
-      <p className="mx-auto mt-2 max-w-md text-sm font-medium text-[#0F0F0F]/60">
+      <p className="mx-auto mt-2 max-w-md text-sm font-medium text-muted-foreground">
         Essayez de retirer un filtre pour retrouver des inspirations actives.
       </p>
       <Button className="mt-5 bg-[#F2B33D] font-bold text-[#0F0F0F] hover:bg-[#F2B33D]/90" onClick={onClear}>

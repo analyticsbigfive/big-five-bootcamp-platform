@@ -24,7 +24,7 @@ export function Footer() {
   }, [])
 
   return (
-    <footer className="relative border-t border-[#F5F5F5] bg-gradient-to-b from-white to-[#F5F5F5]/30 overflow-hidden">
+    <footer className="relative border-t border-border bg-background overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#F2B33D]/30 to-transparent" />
       <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-[#F2B33D]/5 blur-3xl" />
@@ -40,7 +40,7 @@ export function Footer() {
                <img src="/logo.png" className="w-56"/>
               </div>
             </Link>
-            <p className="mt-20 pt-6 text-sm leading-relaxed text-[#0F0F0F]/60">
+            <p className="mt-20 pt-6 text-sm leading-relaxed text-muted-foreground">
              Des milliers de campagnes social media pour inspirer vos prochaines créations.
             </p>
           </div>
@@ -48,13 +48,13 @@ export function Footer() {
           {/* Navigation links */}
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-3">
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-[#0F0F0F]">Produit</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">Produit</h3>
               <nav className="mt-4 flex flex-col gap-3">
-                <Link href="/#features" className="group flex items-center text-sm text-[#0F0F0F]/60 transition-colors hover:text-[#F2B33D]">
+                <Link href="/#features" className="group flex items-center text-sm text-muted-foreground transition-colors hover:text-[#F2B33D]">
                   Fonctionnalités
                   <ArrowUpRight className="ml-1 h-3 w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </Link>
-                <Link href="/pricing" className="group flex items-center text-sm text-[#0F0F0F]/60 transition-colors hover:text-[#F2B33D]">
+                <Link href="/pricing" className="group flex items-center text-sm text-muted-foreground transition-colors hover:text-[#F2B33D]">
                   Tarifs
                   <ArrowUpRight className="ml-1 h-3 w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </Link>
@@ -66,13 +66,13 @@ export function Footer() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-[#0F0F0F]">Entreprise</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">Entreprise</h3>
               <nav className="mt-4 flex flex-col gap-3">
-                <a href="https://bigfive.solutions" target="_blank" rel="noopener noreferrer" className="group flex items-center text-sm text-[#0F0F0F]/60 transition-colors hover:text-[#F2B33D]">
+                <a href="https://bigfive.solutions" target="_blank" rel="noopener noreferrer" className="group flex items-center text-sm text-muted-foreground transition-colors hover:text-[#F2B33D]">
                   Big Five
                   <ArrowUpRight className="ml-1 h-3 w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </a>
-                <Link href="/contact" className="group flex items-center text-sm text-[#0F0F0F]/60 transition-colors hover:text-[#F2B33D]">
+                <Link href="/contact" className="group flex items-center text-sm text-muted-foreground transition-colors hover:text-[#F2B33D]">
                   Contact
                   <ArrowUpRight className="ml-1 h-3 w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </Link>
@@ -80,12 +80,12 @@ export function Footer() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-[#0F0F0F]">Legal</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">Legal</h3>
               <nav className="mt-4 flex flex-col gap-3">
                 <LegalModal 
                   defaultTab="cgu"
                   trigger={
-                    <button className="group flex items-center text-sm text-[#0F0F0F]/60 transition-colors hover:text-[#F2B33D] text-left">
+                    <button className="group flex items-center text-sm text-muted-foreground transition-colors hover:text-[#F2B33D] text-left">
                       CGU
                       <ArrowUpRight className="ml-1 h-3 w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </button>
@@ -94,7 +94,7 @@ export function Footer() {
                 <LegalModal 
                   defaultTab="cgv"
                   trigger={
-                    <button className="group flex items-center text-sm text-[#0F0F0F]/60 transition-colors hover:text-[#F2B33D] text-left">
+                    <button className="group flex items-center text-sm text-muted-foreground transition-colors hover:text-[#F2B33D] text-left">
                       CGV
                       <ArrowUpRight className="ml-1 h-3 w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </button>
@@ -103,7 +103,7 @@ export function Footer() {
                 <LegalModal 
                   defaultTab="privacy"
                   trigger={
-                    <button className="group flex items-center text-sm text-[#0F0F0F]/60 transition-colors hover:text-[#F2B33D] text-left">
+                    <button className="group flex items-center text-sm text-muted-foreground transition-colors hover:text-[#F2B33D] text-left">
                       Confidentialité
                       <ArrowUpRight className="ml-1 h-3 w-3 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </button>
@@ -115,8 +115,8 @@ export function Footer() {
         </div>
 
         {/* Bottom section */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-6 border-t border-[#F5F5F5] pt-8 md:flex-row">
-          <p className="flex items-center gap-1 text-sm text-[#0F0F0F]/50">
+        <div className="mt-12 flex flex-col items-center justify-between gap-6 border-t border-border pt-8 md:flex-row">
+          <p className="flex items-center gap-1 text-sm text-muted-foreground">
             &copy; {currentYear} Laveiye powered by{" "}
             <a href="https://bigfive.solutions" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#F2B33D] transition-colors">
               Big Five
@@ -129,7 +129,7 @@ export function Footer() {
               href="https://www.facebook.com/agencebigfive/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F5F5F5]/50 text-[#0F0F0F] transition-all duration-300 hover:bg-[#F2B33D]/20 hover:text-[#F2B33D] hover:scale-110"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground transition-all duration-300 hover:bg-[#F2B33D]/20 hover:text-[#F2B33D] hover:scale-110"
               aria-label="Facebook"
             >
               <Facebook className="h-5 w-5" />
@@ -138,7 +138,7 @@ export function Footer() {
               href="https://www.linkedin.com/company/big-five-solutions/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F5F5F5]/50 text-[#0F0F0F] transition-all duration-300 hover:bg-[#0A66C2]/20 hover:text-[#0A66C2] hover:scale-110"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground transition-all duration-300 hover:bg-[#0A66C2]/20 hover:text-[#0A66C2] hover:scale-110"
               aria-label="LinkedIn"
             >
               <Linkedin className="h-5 w-5" />
@@ -147,7 +147,7 @@ export function Footer() {
               href="https://www.youtube.com/channel/UCKe6vzOcThB8uzmwZhjK4QQ"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F5F5F5]/50 text-[#0F0F0F] transition-all duration-300 hover:bg-[#FF0000]/20 hover:text-[#FF0000] hover:scale-110"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground transition-all duration-300 hover:bg-[#FF0000]/20 hover:text-[#FF0000] hover:scale-110"
               aria-label="YouTube"
             >
               <Youtube className="h-5 w-5" />

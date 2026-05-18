@@ -137,7 +137,7 @@ function PaginationPageButton({ page, isActive, onClick }: { page: number; isAct
       onClick={onClick}
       className={`h-10 w-10 rounded-lg text-sm font-bold transition-all duration-200 ${isActive
         ? "bg-[#F2B33D] text-white shadow-lg shadow-[#F2B33D]/30 scale-110"
-        : "bg-white border-2 border-[#F5F5F5] text-[#0F0F0F]/70 hover:bg-[#F5F5F5] hover:text-[#0F0F0F] hover:border-[#F2B33D]/30"
+        : "bg-background border-2 border-border text-muted-foreground hover:bg-muted hover:text-foreground hover:border-[#F2B33D]/30"
         }`}
     >
       {page}
@@ -181,7 +181,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }: { currentPage:
       <Button
         variant="outline"
         size="sm"
-        className="h-10 w-10 border-2 border-[#F5F5F5] bg-white p-0 hover:bg-[#F5F5F5] hover:border-[#F2B33D]/30"
+        className="h-10 w-10 border-2 border-border bg-background p-0 hover:bg-muted hover:border-[#F2B33D]/30"
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
         disabled={currentPage === 1}
       >
@@ -214,7 +214,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }: { currentPage:
                   onChange={(e) => setPageInput(e.target.value)}
                   onBlur={handleGoToPage}
                   placeholder={String(currentPage)}
-                  className="h-10 w-14 rounded-lg border-2 border-[#F2B33D]/40 bg-white text-center text-sm font-bold text-[#0F0F0F] outline-none focus:border-[#F2B33D] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="h-10 w-14 rounded-lg border-2 border-[#F2B33D]/40 bg-background text-center text-sm font-bold text-foreground outline-none focus:border-[#F2B33D] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </form>
             ) : !isCurrentPageVisible ? (
@@ -227,7 +227,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }: { currentPage:
               <button
                 type="button"
                 onClick={handlePageInputOpen}
-                className="h-10 min-w-10 rounded-lg border-2 border-dashed border-[#F5F5F5] bg-white px-2 text-sm font-bold text-[#0F0F0F]/50 transition-all hover:border-[#F2B33D]/40 hover:text-[#F2B33D]"
+                className="h-10 min-w-10 rounded-lg border-2 border-dashed border-border bg-background px-2 text-sm font-bold text-muted-foreground transition-all hover:border-[#F2B33D]/40 hover:text-[#F2B33D]"
                 title="Aller à une page"
               >
                 ···
@@ -258,7 +258,7 @@ function PaginationBar({ currentPage, totalPages, onPageChange }: { currentPage:
       <Button
         variant="outline"
         size="sm"
-        className="h-10 w-10 border-2 border-[#F5F5F5] bg-white p-0 hover:bg-[#F5F5F5] hover:border-[#F2B33D]/30"
+        className="h-10 w-10 border-2 border-border bg-background p-0 hover:bg-muted hover:border-[#F2B33D]/30"
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
         disabled={currentPage === totalPages}
       >
@@ -1105,10 +1105,10 @@ export default function DashboardPage() {
   // PAS le contenu du dashboard — sinon il "flashe" avant le redirect vers /subscribe.
   if (subChecking || subLocked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-white via-white to-[#F5F5F5]/20">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#F2B33D] border-t-transparent" />
-          <p className="text-sm text-[#0F0F0F]/70">
+          <p className="text-sm text-muted-foreground">
             {subLocked ? "On prépare votre accès Laveiye…" : "Chargement de votre espace…"}
           </p>
         </div>
@@ -1117,7 +1117,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-gradient-to-br from-white via-white to-[#F5F5F5]/20 relative">
+    <div className="min-h-screen overflow-x-clip bg-background relative">
       <ParticlesBackground color="#F2B33D" particleCount={40} />
       <div className="relative z-10">
         <DashboardNavbar
@@ -1165,17 +1165,17 @@ export default function DashboardPage() {
 
           {/* Banniere contextuelle — suivi de marque active via ?brand= */}
           {brandFilter && (
-            <div className="mb-6 rounded-2xl border-2 border-[#F2B33D]/30 bg-gradient-to-r from-[#F2B33D]/10 to-white p-4 shadow-sm">
+            <div className="mb-6 rounded-2xl border-2 border-[#F2B33D]/30 bg-gradient-to-r from-[#F2B33D]/10 to-background p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F2B33D] shadow-lg shadow-[#F2B33D]/25">
                     <Sparkles className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#0F0F0F]">
+                    <p className="text-sm font-semibold text-foreground">
                       Suivi active : <span className="text-[#F2B33D]">{brandFilter}</span>
                     </p>
-                    <p className="text-xs text-[#0F0F0F]/60">
+                    <p className="text-xs text-muted-foreground">
                       {filteredContent.length} campagne{filteredContent.length > 1 ? 's' : ''} correspond{filteredContent.length > 1 ? 'ent' : ''} a votre demande
                     </p>
                   </div>
@@ -1183,7 +1183,7 @@ export default function DashboardPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="bg-white border-[#F2B33D]/40 text-[#F2B33D] hover:bg-[#F2B33D]/5"
+                  className="bg-background border-[#F2B33D]/40 text-[#F2B33D] hover:bg-[#F2B33D]/5"
                   onClick={clearBrandFilter}
                 >
                   Effacer le filtre marque
@@ -1194,10 +1194,10 @@ export default function DashboardPage() {
 
           <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="animate-fade-in-up">
-              <h1 className="font-[family-name:var(--font-heading)] text-4xl font-bold tracking-tight text-[#0F0F0F]">
+              <h1 className="font-[family-name:var(--font-heading)] text-4xl font-bold tracking-tight text-foreground">
                 Bibliothèque
               </h1>
-              <p className="mt-2 text-base font-medium text-[#0F0F0F]/70">
+              <p className="mt-2 text-base font-medium text-muted-foreground">
                 <span className="text-lg font-bold text-[#F2B33D]">{filteredContent.length}</span> campagne{filteredContent.length > 1 ? "s" : ""} trouvée{filteredContent.length > 1 ? "s" : ""}
               </p>
             </div>
@@ -1212,7 +1212,7 @@ export default function DashboardPage() {
                     onClick={() => handleQuickFilter(filter)}
                     className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300 ${activeQuickFilter === filter.label
                       ? "bg-[#F2B33D] text-white shadow-md shadow-[#F2B33D]/25"
-                      : "bg-[#F5F5F5] text-[#0F0F0F]/70 hover:bg-[#F5F5F5]/80 hover:text-[#0F0F0F]"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                       }`}
                   >
                     {filter.label}
@@ -1224,18 +1224,18 @@ export default function DashboardPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="lg:hidden bg-white border-[#F5F5F5] text-[#0F0F0F]"
+                  className="lg:hidden bg-background border-border text-foreground"
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
                 >
                   <Filter className="mr-2 h-4 w-4" />
                   Filtres
                 </Button>
 
-                <div className="hidden items-center gap-1 rounded-lg border border-[#F5F5F5] bg-white p-1 sm:flex">
+                <div className="hidden items-center gap-1 rounded-lg border border-border bg-background p-1 sm:flex">
                   <button
                     type="button"
                     onClick={() => setViewMode("grid")}
-                    className={`rounded p-1.5 ${viewMode === "grid" ? "bg-[#F5F5F5] text-[#0F0F0F]" : "text-[#0F0F0F]/60 hover:text-[#0F0F0F]"}`}
+                    className={`rounded p-1.5 ${viewMode === "grid" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                     aria-label="Grid view"
                   >
                     <Grid3X3 className="h-4 w-4" />
@@ -1243,7 +1243,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => setViewMode("list")}
-                    className={`rounded p-1.5 ${viewMode === "list" ? "bg-[#F5F5F5] text-[#0F0F0F]" : "text-[#0F0F0F]/60 hover:text-[#0F0F0F]"}`}
+                    className={`rounded p-1.5 ${viewMode === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                     aria-label="List view"
                   >
                     <LayoutList className="h-4 w-4" />
@@ -1293,17 +1293,17 @@ export default function DashboardPage() {
 
                {/* Section "Les meilleures campagnes de la semaine" — Swiper */}
           {filteredWeeklyCampaigns.length > 0 && (
-            <section className="mb-10 rounded-2xl bg-gradient-to-r from-[#F2B33D]/5 to-white border border-[#F2B33D]/20 p-6 overflow-hidden">
+            <section className="mb-10 rounded-2xl bg-gradient-to-r from-[#F2B33D]/5 to-background border border-[#F2B33D]/20 p-6 overflow-hidden">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#F2B33D] to-[#f59e0b] shadow-lg shadow-[#F2B33D]/25">
                     <TrendingUp className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#0F0F0F]">
+                    <h2 className="font-[family-name:var(--font-heading)] text-lg font-bold text-foreground">
                       Notre sélection hebdomadaire de campagnes
                     </h2>
-                    <p className="text-sm text-[#0F0F0F]/60">
+                    <p className="text-sm text-muted-foreground">
                       Semaine du {weekLabel}
                     </p>
                   </div>
@@ -1345,10 +1345,10 @@ export default function DashboardPage() {
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#0F0F0F]">
+                  <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-foreground">
                     À explorer pour votre veille concurrentielle
                   </h2>
-                  <p className="text-sm font-medium text-[#0F0F0F]/60">
+                  <p className="text-sm font-medium text-muted-foreground">
                     {resolvedBrandMonitoringGroups.length} marque{resolvedBrandMonitoringGroups.length > 1 ? 's' : ''} suivie{resolvedBrandMonitoringGroups.length > 1 ? 's' : ''}
                   </p>
                 </div>
@@ -1373,16 +1373,16 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={`brand-block-${group.requestId}`}
-                    className="rounded-2xl bg-white border border-[#F5F5F5] shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                    className="rounded-2xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F5F5F5] bg-gradient-to-r from-[#10B981]/5 to-white p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-gradient-to-r from-[#10B981]/5 to-card p-5">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#10B981] to-[#059669] shadow-lg shadow-[#10B981]/25 shrink-0">
                           <Sparkles className="h-5 w-5 text-white" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                            <h3 className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#0F0F0F] truncate">
+                            <h3 className="font-[family-name:var(--font-heading)] text-lg font-bold text-foreground truncate">
                               {group.brandName}
                             </h3>
                             {/* Badge statut style "Suivi de marques" */}
@@ -1397,7 +1397,7 @@ export default function DashboardPage() {
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#0F0F0F]/60">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span>
                               {group.contents.length} campagne{group.contents.length > 1 ? 's' : ''}
                             </span>
@@ -1416,7 +1416,7 @@ export default function DashboardPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           title={`Flux RSS — ${group.brandName}`}
-                          className="inline-flex items-center gap-1 rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-50"
+                          className="inline-flex items-center gap-1 rounded-lg border border-orange-300 bg-card px-3 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-50"
                         >
                           <Rss className="h-3 w-3" />
                           RSS
@@ -1440,7 +1440,7 @@ export default function DashboardPage() {
                         {group.countries.map((c) => (
                           <span
                             key={`c-${c}`}
-                            className="inline-flex items-center rounded-full bg-white border border-[#10B981]/30 px-2.5 py-0.5 text-[11px] font-medium text-[#0F0F0F]/80"
+                            className="inline-flex items-center rounded-full bg-card border border-[#10B981]/30 px-2.5 py-0.5 text-[11px] font-medium text-foreground/80"
                           >
                             {c}
                           </span>
@@ -1448,7 +1448,7 @@ export default function DashboardPage() {
                         {group.sectors.map((s) => (
                           <span
                             key={`s-${s}`}
-                            className="inline-flex items-center rounded-full bg-white border border-[#10B981]/30 px-2.5 py-0.5 text-[11px] font-medium text-[#0F0F0F]/80"
+                            className="inline-flex items-center rounded-full bg-card border border-[#10B981]/30 px-2.5 py-0.5 text-[11px] font-medium text-foreground/80"
                           >
                             {s}
                           </span>
@@ -1498,7 +1498,7 @@ export default function DashboardPage() {
                   <div className="relative mb-6 flex h-24 w-24 items-center justify-center">
                     <div className="absolute inset-0 rounded-full bg-[#F2B33D]/20 animate-ping" />
                     <div className="absolute inset-2 rounded-full bg-[#F2B33D]/30 animate-pulse" />
-                    <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg">
+                    <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-card shadow-lg">
                       <Image
                         src="/logo.png"
                         alt="Laveiye"
@@ -1509,11 +1509,11 @@ export default function DashboardPage() {
                       />
                     </div>
                   </div>
-                  <h3 className="text-xl font-bold text-[#0F0F0F]">
+                  <h3 className="text-xl font-bold text-foreground">
                     Appuyez sur <kbd className="rounded border border-[#F2B33D]/40 bg-[#F2B33D]/10 px-2 py-0.5 text-sm font-semibold text-[#a17320]">Entrée</kbd> pour rechercher
                   </h3>
-                  <p className="mt-2 max-w-md text-base font-medium text-[#0F0F0F]/60">
-                    Validez votre recherche « <span className="font-semibold text-[#0F0F0F]">{searchQuery.trim()}</span> » ou choisissez une suggestion pour afficher les résultats.
+                  <p className="mt-2 max-w-md text-base font-medium text-muted-foreground">
+                    Validez votre recherche « <span className="font-semibold text-foreground">{searchQuery.trim()}</span> » ou choisissez une suggestion pour afficher les résultats.
                   </p>
                 </div>
               ) : paginatedContent.length > 0 ? (
@@ -1526,14 +1526,14 @@ export default function DashboardPage() {
                             <CalendarDays className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold capitalize text-[#0F0F0F]">
+                            <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold capitalize text-foreground">
                               {group.monthYear}
                             </h2>
-                            <p className="text-sm font-medium text-[#0F0F0F]/60">
+                            <p className="text-sm font-medium text-muted-foreground">
                               {group.campaigns.length} campagne{group.campaigns.length > 1 ? "s" : ""}
                             </p>
                           </div>
-                          <div className="ml-4 flex-1 border-b-2 border-dashed border-[#F5F5F5]" />
+                          <div className="ml-4 flex-1 border-b-2 border-dashed border-border" />
                         </div>
 
                         <div className={`grid gap-6 ${viewMode === "grid"
@@ -1565,16 +1565,16 @@ export default function DashboardPage() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-6 rounded-2xl bg-gradient-to-br from-[#F5F5F5] to-[#F5F5F5]/50 p-6 shadow-inner">
+                  <div className="mb-6 rounded-2xl bg-muted p-6 shadow-inner">
                     <Filter className="h-12 w-12 text-[#F2B33D]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#0F0F0F]">Aucune campagne trouvée</h3>
-                  <p className="mt-2 max-w-md text-base font-medium text-[#0F0F0F]/60">
+                  <h3 className="text-xl font-bold text-foreground">Aucune campagne trouvée</h3>
+                  <p className="mt-2 max-w-md text-base font-medium text-muted-foreground">
                     Essayez de modifier vos filtres pour voir plus de résultats.
                   </p>
                   <Button
                     variant="outline"
-                    className="mt-6 bg-white border-2 border-[#F2B33D]/30 text-[#F2B33D] font-semibold hover:bg-[#F2B33D]/5 hover:border-[#F2B33D]"
+                    className="mt-6 bg-background border-2 border-[#F2B33D]/30 text-[#F2B33D] font-semibold hover:bg-[#F2B33D]/5 hover:border-[#F2B33D]"
                     onClick={() => setSelectedFilters({})}
                   >
                     Effacer les filtres

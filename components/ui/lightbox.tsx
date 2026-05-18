@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { TouchEvent } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Lock } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Lock, FolderPlus, Heart, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getGoogleDriveImageUrl } from "@/lib/utils";
+import { cn, getGoogleDriveImageUrl } from "@/lib/utils";
 import { ReactionButtons } from "@/components/ui/reaction-buttons";
 import { useAuthContext } from "@/components/auth-provider";
 import { UpgradePopup } from "@/components/upgrade-popup";
@@ -18,16 +19,18 @@ interface LightboxProps {
   campaignId?: string;
   onAddToCollection?: () => void;
   onShare?: () => void;
+  onToggleFavorite?: () => void;
   isFavorited?: boolean;
 }
 
-export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose, campaignId, onAddToCollection, onShare, isFavorited }: LightboxProps) {
+export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose, campaignId, onAddToCollection, onShare, onToggleFavorite, isFavorited }: LightboxProps) {
   const images = rawImages.map(getGoogleDriveImageUrl);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isZoomed, setIsZoomed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const { isPremium } = useAuthContext();
 
   useEffect(() => {
@@ -86,6 +89,25 @@ export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose,
     setCurrentIndex((prev) => (prev + 1) % images.length);
   };
 
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start || images.length <= 1 || isZoomed) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaY) > 80) return;
+
+    if (deltaX > 0) goToPrevious();
+    else goToNext();
+  };
+
   const toggleZoom = () => {
     setIsZoomed(!isZoomed);
   };
@@ -132,11 +154,56 @@ export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose,
       onClick={onClose}
     >
       {/* Header with controls */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent">
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between gap-3 p-3 sm:p-4 bg-gradient-to-b from-black/50 to-transparent">
         <span className="text-white/80 text-sm font-medium">
           {currentIndex + 1} / {images.length}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {onToggleFavorite && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite();
+              }}
+              className="text-white hover:bg-white/20"
+              aria-label={isFavorited ? "Retirer des favoris" : "Ajouter aux favoris"}
+              title={isFavorited ? "Retirer des favoris" : "Ajouter aux favoris"}
+            >
+              <Heart className={`h-5 w-5 ${isFavorited ? "fill-current text-[#F2B33D]" : ""}`} />
+            </Button>
+          )}
+          {onAddToCollection && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCollection();
+              }}
+              className="text-white hover:bg-white/20"
+              aria-label="Ajouter à une collection"
+              title="Ajouter à une collection"
+            >
+              <FolderPlus className="h-5 w-5" />
+            </Button>
+          )}
+          {onShare && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare();
+              }}
+              className="text-white hover:bg-white/20"
+              aria-label="Partager"
+              title="Partager"
+            >
+              <Share2 className="h-5 w-5" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -145,6 +212,7 @@ export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose,
               toggleZoom();
             }}
             className="text-white hover:bg-white/20"
+            aria-label={isZoomed ? "Dézoomer" : "Zoomer"}
             title={isZoomed ? "Dézoomer" : "Zoomer"}
           >
             {isZoomed ? <ZoomOut className="h-5 w-5" /> : <ZoomIn className="h-5 w-5" />}
@@ -157,6 +225,7 @@ export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose,
               handleDownload();
             }}
             className={`text-white hover:bg-white/20 ${!isPremium ? "relative" : ""}`}
+            aria-label={isPremium ? "Télécharger" : "Téléchargement : Basic ou Pro requis"}
             title={isPremium ? "Télécharger" : "Téléchargement : Basic ou Pro requis"}
             disabled={isDownloading}
           >
@@ -172,6 +241,7 @@ export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose,
             size="icon"
             onClick={onClose}
             className="text-white hover:bg-white/20"
+            aria-label="Fermer"
             title="Fermer"
           >
             <X className="h-5 w-5" />
@@ -181,8 +251,10 @@ export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose,
 
       {/* Main image */}
       <div 
-        className="flex items-center justify-center w-full h-full p-16"
+        className="flex items-center justify-center w-full h-full px-4 pb-24 pt-16 sm:p-16"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <div 
           className={`relative w-full h-full transition-transform duration-300 ${
@@ -204,7 +276,7 @@ export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose,
       {/* Réactions Like / Dislike + Favoris + Partage dans la lightbox */}
       {campaignId && (
         <div
-          className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3"
+          className="absolute bottom-20 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 sm:bottom-24"
           onClick={(e) => e.stopPropagation()}
         >
           <ReactionButtons
@@ -222,7 +294,7 @@ export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose,
               e.stopPropagation();
               goToPrevious();
             }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm p-3 rounded-full transition-colors"
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 backdrop-blur-sm transition-colors hover:bg-white/20 sm:left-4 sm:p-3"
             title="Image précédente"
             aria-label="Image précédente"
           >
@@ -233,7 +305,7 @@ export function Lightbox({ images: rawImages, initialIndex = 0, isOpen, onClose,
               e.stopPropagation();
               goToNext();
             }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm p-3 rounded-full transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 backdrop-blur-sm transition-colors hover:bg-white/20 sm:right-4 sm:p-3"
             title="Image suivante"
             aria-label="Image suivante"
           >
@@ -287,23 +359,42 @@ interface ImageGalleryProps {
   campaignId?: string;
   onAddToCollection?: () => void;
   onShare?: () => void;
+  onToggleFavorite?: () => void;
+  floatingActionLabel?: string;
+  onFloatingAction?: () => void;
   isFavorited?: boolean;
 }
 
-export function ImageGallery({ mainImage, images: rawImages, title, campaignId, onAddToCollection, onShare, isFavorited }: ImageGalleryProps) {
+export function ImageGallery({ mainImage, images: rawImages, title, campaignId, onAddToCollection, onShare, onToggleFavorite, floatingActionLabel, onFloatingAction, isFavorited }: ImageGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   // Combine main image and additional images, converting Drive URLs
   const images = rawImages.map(getGoogleDriveImageUrl);
   const convertedMainImage = mainImage ? getGoogleDriveImageUrl(mainImage) : null;
   const allImages = [convertedMainImage, ...images].filter(Boolean) as string[];
   const supplementaryImages = images.filter(Boolean) as string[];
+  const currentImage = allImages[currentIndex] || allImages[0] || "";
+  const hasMultipleImages = allImages.length > 1;
+  const galleryKey = [mainImage, ...rawImages].join("|");
 
   const openLightbox = (index: number) => {
     setLightboxIndex(index);
     setLightboxOpen(true);
   };
+
+  const goToPreviousImage = () => {
+    setCurrentIndex((index) => (index - 1 + allImages.length) % allImages.length);
+  };
+
+  const goToNextImage = () => {
+    setCurrentIndex((index) => (index + 1) % allImages.length);
+  };
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [galleryKey]);
 
   if (allImages.length === 0) {
     return (
@@ -318,25 +409,69 @@ export function ImageGallery({ mainImage, images: rawImages, title, campaignId, 
   return (
     <>
       <div className="space-y-4">
-        {/* Main image - full width, no crop */}
+        {/* Main image - visible slider when a campaign has multiple visuals */}
         <div
-          className="relative bg-gray-50 rounded-xl overflow-hidden cursor-pointer group"
-          onClick={() => openLightbox(0)}
+          className="relative overflow-hidden rounded-xl bg-gray-50 cursor-pointer group dark:bg-white/5"
+          onClick={() => openLightbox(currentIndex)}
         >
-          <div className="relative w-full" style={{ minHeight: "200px" }}>
+          <div className="relative flex min-h-[260px] w-full items-center justify-center sm:min-h-[320px]">
             <Image
-              src={convertedMainImage || allImages[0]}
+              src={currentImage}
               alt={title}
               width={800}
               height={800}
-              className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
-              sizes="(max-width: 768px) 100vw, 33vw"
+              className="h-auto max-h-[calc(100svh-230px)] w-auto max-w-full object-contain transition-transform duration-300 group-hover:scale-[1.02] lg:max-h-[calc(100vh-210px)]"
+              sizes="(max-width: 1024px) 100vw, 800px"
               priority
             />
           </div>
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
             <ZoomIn className="h-10 w-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
+          {hasMultipleImages && (
+            <>
+              <button
+                type="button"
+                className="absolute left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/45 text-white opacity-90 backdrop-blur-sm transition-all hover:bg-black/65"
+                aria-label="Visuel précédent"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToPreviousImage();
+                }}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/45 text-white opacity-90 backdrop-blur-sm transition-all hover:bg-black/65"
+                aria-label="Visuel suivant"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToNextImage();
+                }}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <div className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                {currentIndex + 1}/{allImages.length}
+              </div>
+            </>
+          )}
+          {floatingActionLabel && onFloatingAction && (
+            <div className="absolute inset-x-0 bottom-8 z-10 flex justify-center px-4 sm:bottom-10">
+              <Button
+                type="button"
+                className="h-11 rounded-full bg-[#F2B33D] px-5 text-sm font-bold text-[#0F0F0F] shadow-lg shadow-black/25 hover:bg-[#E4A82F] hover:text-[#0F0F0F]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFloatingAction();
+                }}
+              >
+                {floatingActionLabel}
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Supplementary images gallery */}
@@ -352,9 +487,13 @@ export function ImageGallery({ mainImage, images: rawImages, title, campaignId, 
               {supplementaryImages.map((image, index) => (
                 <button
                   key={index}
-                  onClick={() => openLightbox(index + 1)} // +1 because main image is at index 0
-                  className="relative aspect-square bg-muted rounded-lg overflow-hidden cursor-pointer group"
-                  aria-label={`Ouvrir image ${index + 2}`}
+                  onClick={() => setCurrentIndex(index + 1)} // +1 because main image is at index 0
+                  onDoubleClick={() => openLightbox(index + 1)}
+                  className={cn(
+                    "relative aspect-square overflow-hidden rounded-lg bg-muted cursor-pointer group ring-offset-2 ring-offset-background transition-all",
+                    currentIndex === index + 1 && "ring-2 ring-[#F2B33D]"
+                  )}
+                  aria-label={`Afficher image ${index + 2}`}
                   title={`Image ${index + 2}`}
                 >
                   <Image
@@ -383,6 +522,7 @@ export function ImageGallery({ mainImage, images: rawImages, title, campaignId, 
         campaignId={campaignId}
         onAddToCollection={onAddToCollection}
         onShare={onShare}
+        onToggleFavorite={onToggleFavorite}
         isFavorited={isFavorited}
       />
     </>
