@@ -46,7 +46,7 @@ function formatDate(dateStr: string | null | undefined) {
     })
 }
 
-function formatDateTime(dateStr: string | null) {
+function formatDateTime(dateStr: string | null | undefined) {
     if (!dateStr) return "N/A"
     return new Date(dateStr).toLocaleDateString('fr-FR', {
         day: '2-digit',
@@ -61,8 +61,19 @@ function getSubscriptionDaysLeft(endDate: string | null | undefined): number | n
     if (!endDate) return null
     const end = new Date(endDate)
     const now = new Date()
-    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    // Différence en jours arrondie au plus juste : sous 12h restantes,
+    // on tombe à 0 ; pas d'arrondi vers le haut qui ferait croire qu'il
+    // reste "1 jour" alors qu'il reste 2 heures.
+    const diff = Math.round((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     return diff
+}
+
+/** Heures restantes (utilisé pour l'affichage fin sous 24h). */
+function getSubscriptionHoursLeft(endDate: string | null | undefined): number | null {
+    if (!endDate) return null
+    const end = new Date(endDate)
+    const now = new Date()
+    return Math.max(0, Math.floor((end.getTime() - now.getTime()) / (1000 * 60 * 60)))
 }
 
 function getPaymentStatusBadge(status: string) {
@@ -110,8 +121,9 @@ export function UserRow({ user, payments, favoritesCount }: UserRowProps) {
     const subStart = user.subscription_start_date as string | null | undefined
     const subEnd = user.subscription_end_date as string | null | undefined
     const daysLeft = getSubscriptionDaysLeft(subEnd)
+    const hoursLeft = getSubscriptionHoursLeft(subEnd)
     const hasSubscription = !!subStart
-    const isSubscriptionActive = user.subscription_status === 'active' && daysLeft !== null && daysLeft > 0
+    const isSubscriptionActive = user.subscription_status === 'active' && hoursLeft !== null && hoursLeft > 0
 
     const handleEndSubscription = async () => {
         if (!confirm(`Mettre fin a l'abonnement de ${user.name || user.email} ?`)) return
@@ -262,7 +274,9 @@ export function UserRow({ user, payments, favoritesCount }: UserRowProps) {
                         <div className="text-xs">
                             <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3 text-muted-foreground" />
-                                <span>{formatDate(subStart)} → {formatDate(subEnd)}</span>
+                                <span title={`Début : ${formatDateTime(subStart)}\nFin : ${formatDateTime(subEnd)}`}>
+                                    {formatDateTime(subStart)} → {formatDate(subEnd)}
+                                </span>
                             </div>
                             {daysLeft !== null && (
                                 <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -273,7 +287,11 @@ export function UserRow({ user, payments, favoritesCount }: UserRowProps) {
                                             : 'bg-red-50 text-red-700'
                                 }`}>
                                     <Clock className="h-3 w-3" />
-                                    {daysLeft > 0 ? `${daysLeft}j restants` : 'Expiré'}
+                                    {hoursLeft !== null && hoursLeft <= 0
+                                        ? 'Expiré'
+                                        : hoursLeft !== null && hoursLeft < 24
+                                            ? `${hoursLeft}h restantes`
+                                            : `${daysLeft}j restants`}
                                 </span>
                             )}
                         </div>

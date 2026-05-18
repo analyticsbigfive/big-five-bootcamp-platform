@@ -24,9 +24,13 @@ export async function GET(request: NextRequest) {
     .limit(limit)
 
   if (search) {
-    query = query.or(
-      `email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%,promo_code.ilike.%${search}%`
-    )
+    const { escapeForIlike } = await import('@/lib/search-utils')
+    const s = escapeForIlike(search)
+    if (s) {
+      query = query.or(
+        `email.ilike.%${s}%,first_name.ilike.%${s}%,last_name.ilike.%${s}%,promo_code.ilike.%${s}%`
+      )
+    }
   }
 
   const { data, error, count } = await query

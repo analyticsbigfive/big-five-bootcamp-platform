@@ -40,7 +40,6 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/icons/Collections.svg" />
         <link rel="preload" as="image" href="/icons/Veille.svg" />
         <link rel="preload" as="image" href="/icons/Profil.svg" />
-        <link rel="preload" as="image" href="/selena/abonnement.svg" />
         <link rel="preload" as="image" href="/icons/default-avatar.svg" />
       </head>
       <body className="font-sans antialiased">

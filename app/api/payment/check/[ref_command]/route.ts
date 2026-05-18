@@ -11,14 +11,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkDepositStatus } from '@/lib/pawapay';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 let _supabase: ReturnType<typeof createClient> | null = null;
 function getSupabase() {
   if (!_supabase) {
-    _supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY required for payment check');
+    }
+    _supabase = createClient(url, key);
   }
   return _supabase;
 }
@@ -49,6 +52,18 @@ export async function POST(
 ) {
   try {
     const { ref_command } = await params;
+
+    // Anti-polling abusif : 30 checks / minute par (IP, ref). Une page
+    // de pending poll toutes les ~3s, soit ~20/min ; au-delà = bot.
+    const ip = getClientIp(request);
+    const rl = rateLimit(`payment-check:${ip}:${ref_command}`, 30, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Trop de vérifications. Patientez.' },
+        { status: 429 }
+      );
+    }
+
     const supabase = getSupabase() as any;
 
     if (!ref_command) {
@@ -245,10 +260,11 @@ export async function POST(
 
   } catch (error) {
     console.error('Check payment error:', error);
+    const devDetails = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
       {
         error: 'Internal server error',
-        details: error instanceof Error ? error.message : String(error),
+        ...(process.env.NODE_ENV !== 'production' ? { details: devDetails } : {}),
       },
       { status: 500 }
     );

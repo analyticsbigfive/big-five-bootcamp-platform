@@ -34,13 +34,15 @@ export async function POST(request: NextRequest) {
   const keynoteTag = (map['mailchimp_keynote_tag'] || 'keynote-2026').trim()
   const promoTag = (map['mailchimp_keynote_promo_tag'] || 'promo-pre-launch').trim()
 
-  console.log('[keynote/sync] settings read', {
-    rowCount: settings?.length || 0,
-    keys: settings?.map((s: { key: string }) => s.key) || [],
-    audienceId: audienceId || '(empty)',
-    keynoteTag,
-    promoTag,
-  })
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[keynote/sync] settings read', {
+      rowCount: settings?.length || 0,
+      keys: settings?.map((s: { key: string }) => s.key) || [],
+      audienceId: audienceId || '(empty)',
+      keynoteTag,
+      promoTag,
+    })
+  }
 
   // Liste à synchroniser
   let query = supabase
@@ -93,13 +95,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  console.log('[keynote/sync] Starting sync', {
-    rows: rows?.length || 0,
-    audienceId: effectiveAudienceId,
-    keynoteTag,
-    promoTag,
-    usingMainAudience: !audienceId,
-  })
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[keynote/sync] Starting sync', {
+      rows: rows?.length || 0,
+      audienceId: effectiveAudienceId,
+      keynoteTag,
+      promoTag,
+      usingMainAudience: !audienceId,
+    })
+  }
 
   let synced = 0
   const errors: { email: string; error: string }[] = []

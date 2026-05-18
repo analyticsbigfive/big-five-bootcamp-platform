@@ -16,6 +16,7 @@ import {
   isPromoCodeFormatValid,
   normalizePromoCode,
 } from '@/lib/promo-codes'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,17 @@ export const dynamic = 'force-dynamic'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function POST(request: NextRequest) {
+  // Rate-limit anti brute-force : LAVEIYE-XXXX a ~1M combinaisons,
+  // 8 essais / 5 min par IP rendent l'énumération impraticable.
+  const ip = getClientIp(request)
+  const rl = rateLimit(`promo-validate:${ip}`, 8, 5 * 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { valid: false, error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
+      { status: 429 }
+    )
+  }
+
   let body: { code?: string; email?: string }
   try {
     body = await request.json()

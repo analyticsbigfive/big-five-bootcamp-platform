@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-server'
 import { getAuthenticatedUser } from '@/lib/supabase-server'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Accès non autorisé' },
         { status: 403 }
+      )
+    }
+
+    // Anti brute-force du mot de passe actuel : 5 essais / 15 min par
+    // couple (IP, admin email). On limite par IP+email pour qu'un admin
+    // honnête sur deux machines ne se bloque pas mutuellement.
+    const ip = getClientIp(request)
+    const rl = rateLimit(`admin-pwd:${ip}:${authUser.email}`, 5, 15 * 60_000)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
+        { status: 429 }
       )
     }
 

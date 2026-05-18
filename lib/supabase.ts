@@ -77,17 +77,24 @@ let adminClient: ReturnType<typeof createSupabaseClient> | null = null
 
 export const getSupabaseAdmin = () => {
   if (adminClient) return adminClient
-  
-  adminClient = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  )
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !serviceKey) {
+    // Aucun fallback ANON : ces routes ont besoin des privilèges service_role.
+    // Tomber sur la clé anon ferait échouer silencieusement les writes admin
+    // (RLS) et masquerait l'erreur de config en prod.
+    throw new Error(
+      'Supabase admin client unavailable: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required server-side.'
+    )
+  }
+
+  adminClient = createSupabaseClient(url, serviceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
   return adminClient
 }
 

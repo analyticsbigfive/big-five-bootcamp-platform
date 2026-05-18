@@ -227,7 +227,7 @@ export default function PricingPage() {
                                         Veille concurrentielle <span className="text-[#F2B33D]">personnalisée</span>
                                     </h2>
                                     <p className="text-white/70 text-sm sm:text-base mb-6">
-                                        Recevez une veille créative dédiée à votre marque et à vos concurrents : suivi des campagnes, alertes ciblées, rapports périodiques. Tarification adaptée à votre périmètre.
+                                        Recevez une veille créative dédiée à votre marque et à vos concurrents : monitoring continu, alertes ciblées, rapports périodiques. Tarification adaptée à votre périmètre.
                                     </p>
                                     <ul className="space-y-2.5 mb-8 text-sm">
                                         <li className="flex items-center gap-2.5">

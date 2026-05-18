@@ -6,6 +6,7 @@ import { Building2, Loader2, ArrowLeft, MessageSquare, GitMerge, CheckSquare, Sq
 import Link from "next/link"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { BrandRequestCampaignsManager } from "@/components/admin/brand-request-campaigns-manager"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 
 interface BrandRequest {
   id: string
@@ -564,7 +565,7 @@ export default function AdminBrandRequestsPage() {
                         {/* admin_notes peut être du HTML (RichTextEditor Tiptap) ou du texte simple */}
                         <div
                           className="prose prose-sm max-w-none text-sm text-gray-700"
-                          dangerouslySetInnerHTML={{ __html: req.admin_notes }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(req.admin_notes) }}
                         />
                       </div>
                     )}

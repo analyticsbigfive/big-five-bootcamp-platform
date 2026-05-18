@@ -447,10 +447,12 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Subscription payment error:', error);
+    const devMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        // En prod : pas de fuite. En dev : on garde pour debug.
+        ...(process.env.NODE_ENV !== 'production' ? { message: devMessage } : {}),
       },
       { status: 500 }
     );

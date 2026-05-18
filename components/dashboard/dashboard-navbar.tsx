@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { Menu, X, Search, User, LogOut, Settings, CreditCard, Crown, Sparkles, Clock, Users, Heart, MousePointer, Building2, FolderOpen, SlidersHorizontal, ArrowRight } from "lucide-react"
+import { Menu, X, Search, User, LogOut, Settings, CreditCard, Crown, Sparkles, Clock, Users, Heart, MousePointer, Building2, FolderOpen, SlidersHorizontal, ArrowRight, LibraryBig, Flame, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useAuthContext } from "@/components/auth-provider"
@@ -21,6 +21,7 @@ import {
 export function DashboardNavbar({
   searchQuery: externalSearchQuery,
   onSearchChange,
+  onSearchSubmit,
   userPlan: externalUserPlan,
   monthlyClicks: externalMonthlyClicks,
   monthlyClickLimit,
@@ -31,6 +32,8 @@ export function DashboardNavbar({
 }: {
   searchQuery?: string;
   onSearchChange?: (query: string) => void
+  /** Appelé sur soumission explicite (Enter ou clic sur suggestion). Sert au comptage du quota. */
+  onSearchSubmit?: (query: string) => void
   userPlan?: string
   monthlyClicks?: number
   monthlyClickLimit?: number
@@ -212,26 +215,14 @@ export function DashboardNavbar({
               href="/dashboard"
               className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]/50 flex items-center gap-1"
             >
-              <img
-                src="/selena/bibliotheque.svg"
-                alt=""
-                width="14"
-                height="14"
-                className="h-3.5 w-3.5"
-               loading="eager" />
+              <LibraryBig className="h-3.5 w-3.5" aria-hidden="true" />
               Bibliothèque
             </Link>
             <Link
               href="/temps-forts"
               className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F]/70 transition-colors hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] flex items-center gap-1"
             >
-              <img
-                src="/selena/temps-fort.svg"
-                alt=""
-                width="14"
-                height="14"
-                className="h-3.5 w-3.5"
-               loading="eager" />
+              <Flame className="h-3.5 w-3.5" aria-hidden="true" />
               Temps forts
             </Link>
             {isPremium && (
@@ -239,13 +230,7 @@ export function DashboardNavbar({
                 href="/favorites"
                 className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F]/70 transition-colors hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] flex items-center gap-1"
               >
-                <img
-                  src="/selena/favoris.svg"
-                  alt=""
-                  width="14"
-                  height="14"
-                  className="h-3.5 w-3.5"
-                 loading="eager" />
+                <Heart className="h-3.5 w-3.5" aria-hidden="true" />
                 Favoris
               </Link>
             )}
@@ -254,13 +239,7 @@ export function DashboardNavbar({
                 href="/favorites?tab=collections"
                 className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F]/70 transition-colors hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] flex items-center gap-1"
               >
-                <img
-                  src="/selena/dossier.svg"
-                  alt=""
-                  width="14"
-                  height="14"
-                  className="h-3.5 w-3.5"
-                 loading="eager" />
+                <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
                 Collections
               </Link>
             )}
@@ -268,13 +247,7 @@ export function DashboardNavbar({
               href="/dashboard/brand-requests"
               className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F]/70 transition-colors hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] flex items-center gap-1"
             >
-              <img
-                src="/selena/veille.svg"
-                alt=""
-                width="14"
-                height="14"
-                className="h-3.5 w-3.5"
-               loading="eager" />
+              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
               Veille
             </Link>
           </nav>
@@ -292,6 +265,10 @@ export function DashboardNavbar({
                 if (!q) return
                 if (!isOnDashboard) {
                   router.push(`/dashboard?search=${encodeURIComponent(q)}`)
+                } else if (onSearchSubmit) {
+                  // Sur dashboard : déclencher le décompte du quota uniquement
+                  // sur soumission explicite (Enter). Pas de comptage à la volée.
+                  onSearchSubmit(q)
                 }
                 setShowSuggestions(false)
               }}
@@ -348,6 +325,8 @@ export function DashboardNavbar({
                             e.preventDefault()
                             if (isOnDashboard) {
                               setSearchQuery(s)
+                              // Clic sur suggestion = soumission explicite → décompte.
+                              onSearchSubmit?.(s)
                             } else {
                               router.push(`/dashboard?search=${encodeURIComponent(s)}`)
                             }
@@ -583,20 +562,20 @@ export function DashboardNavbar({
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/profile" className="flex items-center gap-2 text-[#0F0F0F]">
-                  <img src="/selena/profil.svg" alt="" width="16" height="16" className="h-4 w-4"  loading="eager" />
+                  <User className="h-4 w-4" aria-hidden="true" />
                   Profil
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/subscribe" className="flex items-center gap-2 text-[#0F0F0F]">
-                  <img src="/selena/abonnement.svg" alt="" width="16" height="16" className="h-4 w-4"  loading="eager" />
+                  <CreditCard className="h-4 w-4" aria-hidden="true" />
                   Abonnement
                 </Link>
               </DropdownMenuItem>
               {isPremium && (
                 <DropdownMenuItem asChild>
                   <Link href="/favorites" className="flex items-center gap-2 text-[#0F0F0F]">
-                    <img src="/selena/favoris.svg" alt="" width="16" height="16" className="h-4 w-4"  loading="eager" />
+                    <Heart className="h-4 w-4" aria-hidden="true" />
                     Mes Favoris
                   </Link>
                 </DropdownMenuItem>
@@ -604,14 +583,14 @@ export function DashboardNavbar({
               {isPremium && (
                 <DropdownMenuItem asChild>
                   <Link href="/favorites?tab=collections" className="flex items-center gap-2 text-[#0F0F0F]">
-                    <img src="/selena/dossier.svg" alt="" width="16" height="16" className="h-4 w-4"  loading="eager" />
+                    <FolderOpen className="h-4 w-4" aria-hidden="true" />
                     Collections
                   </Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/brand-requests" className="flex items-center gap-2 text-[#0F0F0F]">
-                  <img src="/selena/veille.svg" alt="" width="16" height="16" className="h-4 w-4"  loading="eager" />
+                  <Eye className="h-4 w-4" aria-hidden="true" />
                   Veille concurrentielle
                 </Link>
               </DropdownMenuItem>
@@ -698,13 +677,7 @@ export function DashboardNavbar({
               className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]/50 flex items-center gap-1.5"
               onClick={() => setIsOpen(false)}
             >
-              <img
-                src="/selena/bibliotheque.svg"
-                alt=""
-                width="16"
-                height="16"
-                className="h-4 w-4"
-               loading="eager" />
+              <LibraryBig className="h-4 w-4" aria-hidden="true" />
               Bibliothèque
             </Link>
             <Link
@@ -712,7 +685,7 @@ export function DashboardNavbar({
               className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F]/70 transition-colors hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] flex items-center gap-1.5"
               onClick={() => setIsOpen(false)}
             >
-              <img src="/selena/temps-fort.svg" alt="" width="16" height="16" className="h-4 w-4"  loading="eager" />
+              <Flame className="h-4 w-4" aria-hidden="true" />
               Temps forts
             </Link>
             {isPremium && (
@@ -721,7 +694,7 @@ export function DashboardNavbar({
                 className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F]/70 transition-colors hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] flex items-center gap-1.5"
                 onClick={() => setIsOpen(false)}
               >
-                <img src="/selena/favoris.svg" alt="" width="16" height="16" className="h-4 w-4"  loading="eager" />
+                <Heart className="h-4 w-4" aria-hidden="true" />
                 Mes Favoris
               </Link>
             )}
@@ -731,7 +704,7 @@ export function DashboardNavbar({
                 className="rounded-md px-3 py-2 text-sm font-medium text-[#0F0F0F]/70 transition-colors hover:bg-[#F5F5F5]/50 hover:text-[#0F0F0F] flex items-center gap-1.5"
                 onClick={() => setIsOpen(false)}
               >
-                <img src="/selena/dossier.svg" alt="" width="16" height="16" className="h-4 w-4"  loading="eager" />
+                <FolderOpen className="h-4 w-4" aria-hidden="true" />
                 Collections
               </Link>
             )}

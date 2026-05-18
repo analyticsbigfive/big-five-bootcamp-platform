@@ -27,6 +27,7 @@ import {
   Sparkles,
   UserPlus,
 } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { useAuth } from "@/hooks/use-auth";
 import { useAuthContext } from "@/components/auth-provider";
 import { DashboardNavbar } from "@/components/dashboard/dashboard-navbar";
@@ -85,9 +86,13 @@ interface Campaign {
  * - Sinon, convertit les retours à la ligne en <br>, **bold** en <strong>, etc.
  */
 function formatDescription(text: string): string {
-  // Si c'est déjà du HTML (contient des balises), retourner tel quel
+  // Si c'est déjà du HTML (contient des balises), sanitize et retourne.
+  // ATTENTION : ne JAMAIS retourner le HTML brut sans sanitize — le
+  // contenu provient de la table campaigns (écrite par les admins) mais
+  // un admin compromis ou un import non vérifié pourrait injecter du JS
+  // qui s'exécuterait sur la page consultée par tous les utilisateurs.
   if (/<[a-z][\s\S]*>/i.test(text)) {
-    return text;
+    return sanitizeHtml(text);
   }
 
   let html = text

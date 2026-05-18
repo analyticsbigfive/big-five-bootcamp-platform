@@ -117,6 +117,48 @@ export const PLANS = {
   Pro: PLAN_PRO,
 } as const
 
+/**
+ * Plan canonique (lowercase, slug stable). Source de vérité pour les
+ * comparaisons côté code et les keys d'URL/payload. La BDD stocke en
+ * `Discovery | Basic | Pro`, le code applicatif manipule la forme slug.
+ *
+ * Légacy "free" → 'locked' (compte verrouillé sans abonnement actif).
+ * Valeurs inattendues → 'locked' (fail-safe : pas de fallback Pro/Basic).
+ */
+export type PlanSlug = 'discovery' | 'basic' | 'pro' | 'locked'
+
+const PLAN_DB_KEY: Record<Exclude<PlanSlug, 'locked'>, 'Discovery' | 'Basic' | 'Pro'> = {
+  discovery: 'Discovery',
+  basic: 'Basic',
+  pro: 'Pro',
+}
+
+/**
+ * Normalise vers un slug canonique kebab : 'discovery' | 'basic' | 'pro' | 'locked'.
+ * Coexiste avec `normalizePlan` historique (qui renvoie la forme Capitalized
+ * ou null). Préférer `toPlanSlug` dans le nouveau code pour comparaisons.
+ */
+export function toPlanSlug(plan: string | null | undefined): PlanSlug {
+  const p = String(plan || '').toLowerCase().trim()
+  if (p === 'pro') return 'pro'
+  if (p === 'basic') return 'basic'
+  if (p === 'discovery') return 'discovery'
+  return 'locked'
+}
+
+/** Forme DB (capitalisée) à utiliser dans les writes `users.plan = ...`. */
+export function planSlugToDbKey(slug: PlanSlug): 'Discovery' | 'Basic' | 'Pro' | null {
+  return slug === 'locked' ? null : PLAN_DB_KEY[slug]
+}
+
+/** Rang ordinal : locked < discovery < basic < pro. Utile pour comparer upgrade vs downgrade. */
+export function planRank(slug: PlanSlug): number {
+  if (slug === 'pro') return 3
+  if (slug === 'basic') return 2
+  if (slug === 'discovery') return 1
+  return 0
+}
+
 export function getPlanConfig(plan: string | null | undefined) {
   switch ((plan || "").toLowerCase()) {
     case "pro":

@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import dynamic from "next/dynamic"
 import { DashboardNavbar } from "@/components/dashboard/dashboard-navbar"
 import { TempsFortsBanner } from "@/components/temps-forts/temps-forts-banner"
@@ -280,7 +281,14 @@ export default function DashboardPage() {
   const [activeQuickFilter, setActiveQuickFilter] = useState("Tous")
   // Pré-remplir la recherche depuis ?brand=X (lien direct depuis notification/email)
   // ou ?search=X (navbar utilisée depuis une autre page).
+  // `searchQuery` = ce que l'utilisateur tape (live, sert aux suggestions).
+  // `committedSearchQuery` = ce qui filtre réellement les résultats. Ne change
+  // QUE sur action explicite (Enter, clic suggestion, clic tag filtre, vidage,
+  // ou deeplink `?search=` / `?brand=`). Évite que l'utilisateur voie les
+  // résultats avant de soumettre — sinon il peut consommer le contenu sans
+  // déclencher le décompte du quota.
   const [searchQuery, setSearchQuery] = useState(() => brandFilter || initialSearch)
+  const [committedSearchQuery, setCommittedSearchQuery] = useState(() => brandFilter || initialSearch)
   const itemsPerPage = 9
 
   // Quota de recherches+filtres / mois, compteur partage (Découverte: 5, Basic: 30, Pro: illimité)
@@ -299,9 +307,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const next = brandFilter || initialSearch
     setSearchQuery(next)
+    // Deeplink : on commit immédiatement pour afficher les résultats.
+    setCommittedSearchQuery(next)
     setCurrentPage(1)
     // Pré-marquer UNIQUEMENT les arrivees via `?brand=…` (suivi de marques).
-    // Les `?search=…` doivent etre tracees par le debounce.
+    // Les `?search=…` arrivent via navbar (déjà comptés ailleurs).
     if (brandFilter) {
       lastCountedSearchRef.current = next.trim()
     }
@@ -347,6 +357,7 @@ export default function DashboardPage() {
 
   const clearBrandFilter = useCallback(() => {
     setSearchQuery("")
+    setCommittedSearchQuery("")
     setCurrentPage(1)
     router.replace("/dashboard")
   }, [router])
@@ -523,6 +534,14 @@ export default function DashboardPage() {
     if (!q) return
     if (q === lastCountedSearchRef.current) return
 
+    // DÉSACTIVÉ : ne plus compter automatiquement sur frappe.
+    // Le quota est débité UNIQUEMENT sur action explicite :
+    //   - clic sur un tag de filtre (handleFilterChange)
+    //   - submit Enter dans la barre (handleSubmitSearch)
+    //   - clic sur une suggestion d'autocomplétion (handleSubmitSearch via navbar)
+    return
+
+    // eslint-disable-next-line no-unreachable
     const handle = setTimeout(async () => {
       // Regle metier : recherche sans resultat ne consomme pas de quota.
       if (countMatching(selectedFilters, q) === 0) {
@@ -754,8 +773,10 @@ export default function DashboardPage() {
   )
 
   const filteredContent = useMemo(() => {
-    return campaigns.filter((content) => matchesFiltersAndQuery(content, selectedFilters, searchQuery))
-  }, [selectedFilters, campaigns, searchQuery, matchesFiltersAndQuery])
+    // Utilise `committedSearchQuery` (pas `searchQuery` live) : les résultats
+    // ne se mettent à jour que sur soumission explicite.
+    return campaigns.filter((content) => matchesFiltersAndQuery(content, selectedFilters, committedSearchQuery))
+  }, [selectedFilters, campaigns, committedSearchQuery, matchesFiltersAndQuery])
 
   // Appliquer les mêmes filtres aux campagnes de la semaine
   const filteredWeeklyCampaigns = useMemo(() => {
@@ -887,6 +908,81 @@ export default function DashboardPage() {
     }))
   }, [paginatedContent])
 
+  /**
+   * Soumission explicite de la barre de recherche (Enter ou clic suggestion).
+   * Débite le quota mensuel UNIQUEMENT si :
+   *   - la requête est non-vide
+   *   - elle diffère de la précédente déjà comptée
+   *   - elle retourne au moins un résultat (combinée aux filtres actifs)
+   *   - l'utilisateur n'a pas déjà atteint sa limite
+   */
+  const handleSubmitSearch = async (rawQuery: string) => {
+    const q = (rawQuery || '').trim()
+    if (!q) {
+      // Soumission d'une chaîne vide = vider la recherche affichée.
+      setCommittedSearchQuery('')
+      return
+    }
+    // Commit immédiat : c'est ce qui déclenche l'affichage des résultats.
+    setCommittedSearchQuery(q)
+    setCurrentPage(1)
+
+    // Verrou anti-doublon : on set la ref AVANT l'appel async pour empêcher
+    // qu'un second submit (clic suggestion + Enter rapide) déclenche un
+    // 2e tracking pendant que le 1er est encore in-flight.
+    if (q === lastCountedSearchRef.current) return
+    lastCountedSearchRef.current = q
+
+    if (countMatching(selectedFilters, q) === 0) {
+      // Pas de résultat : on garde la ref mais on ne consomme pas le quota.
+      return
+    }
+    if (searchQuota.limit !== null) {
+      const used = searchQuota.counts['_shared'] || 0
+      if (used >= searchQuota.limit) {
+        showUpgrade('searches-bar')
+        return
+      }
+    }
+    try {
+      const res = await fetch('/api/track-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filterId: 'Recherche',
+          query: q,
+          filters: selectedFilters,
+          source: 'bar',
+        }),
+      })
+      if (res.status === 403) {
+        try {
+          const data = await res.json()
+          if (data?.counts) {
+            setSearchQuota((s) => ({ ...s, counts: data.counts, limit: data.limit ?? s.limit }))
+          }
+        } catch { /* ignore */ }
+        showUpgrade('searches-bar')
+        return
+      }
+      if (res.ok) {
+        try {
+          const data = await res.json()
+          if (data?.counts) {
+            setSearchQuota({
+              counts: data.counts,
+              limit: data.limit ?? null,
+              tier: data.tier ?? 'discovery',
+            })
+          }
+        } catch { /* ignore */ }
+      }
+    } catch {
+      // Erreur réseau : ref déjà set, on retentera au prochain submit
+      // d'une autre query (ou si user efface puis re-entre la même).
+    }
+  }
+
   const handleFilterChange = async (filters: Record<string, string[]>) => {
     // Detecter les filtres nouvellement ajoutes pour tracker les quotas de recherche.
     // Un "filtre" au sens quota = une categorie (Pays, Secteur, ...).
@@ -898,10 +994,15 @@ export default function DashboardPage() {
       if (added) newlyAddedCategories.push(category)
     }
 
+    // Clic tag = soumission implicite : on commit la recherche en cours
+    // (le live searchQuery) en même temps que l'on applique le filtre.
+    const q = searchQuery.trim()
+    setCommittedSearchQuery(q)
+
     // Regle metier : un filtre qui ne renvoie aucun resultat ne consomme pas
     // de quota (l'utilisateur voit "Aucune campagne trouvee" — ne doit pas
     // bruler son compteur mensuel partage).
-    const wouldReturnResults = countMatching(filters, searchQuery) > 0
+    const wouldReturnResults = countMatching(filters, q) > 0
 
     if (!wouldReturnResults) {
       setSelectedFilters(filters)
@@ -926,7 +1027,7 @@ export default function DashboardPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             filterId: category,
-            query: searchQuery,
+            query: q,
             filters: filters,
             source: 'filter',
           }),
@@ -986,7 +1087,14 @@ export default function DashboardPage() {
       <div className="relative z-10">
         <DashboardNavbar
           searchQuery={searchQuery}
-          onSearchChange={(q) => { setSearchQuery(q); setCurrentPage(1) }}
+          onSearchChange={(q) => {
+            setSearchQuery(q)
+            // Si l'utilisateur efface complètement la barre, on commit aussi
+            // pour ne pas laisser d'anciens résultats filtrés à l'écran.
+            if (q.trim() === '') setCommittedSearchQuery('')
+            setCurrentPage(1)
+          }}
+          onSearchSubmit={handleSubmitSearch}
           userPlan={userPlan}
           monthlyClicks={monthlyClicks}
           monthlyClickLimit={MONTHLY_CLICK_LIMIT}
@@ -1346,6 +1454,33 @@ export default function DashboardPage() {
           )}
               {isLoading ? (
                 <ContentGridSkeleton count={6} />
+              ) : searchQuery.trim() !== '' && searchQuery.trim() !== committedSearchQuery.trim() ? (
+                // Recherche tapée mais non encore soumise : on masque les
+                // résultats pour forcer l'utilisateur à appuyer sur Entrée
+                // (ou cliquer une suggestion/un tag). Évite que les résultats
+                // s'affichent sans que le quota soit débité.
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <div className="relative mb-6 flex h-24 w-24 items-center justify-center">
+                    <div className="absolute inset-0 rounded-full bg-[#F2B33D]/20 animate-ping" />
+                    <div className="absolute inset-2 rounded-full bg-[#F2B33D]/30 animate-pulse" />
+                    <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg">
+                      <Image
+                        src="/logo.png"
+                        alt="Laveiye"
+                        width={40}
+                        height={40}
+                        className="h-10 w-10 object-contain animate-pulse"
+                        priority
+                      />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-[#0F0F0F]">
+                    Appuyez sur <kbd className="rounded border border-[#F2B33D]/40 bg-[#F2B33D]/10 px-2 py-0.5 text-sm font-semibold text-[#a17320]">Entrée</kbd> pour rechercher
+                  </h3>
+                  <p className="mt-2 max-w-md text-base font-medium text-[#0F0F0F]/60">
+                    Validez votre recherche « <span className="font-semibold text-[#0F0F0F]">{searchQuery.trim()}</span> » ou choisissez une suggestion pour afficher les résultats.
+                  </p>
+                </div>
               ) : paginatedContent.length > 0 ? (
                 <>
                   <div className="space-y-10">

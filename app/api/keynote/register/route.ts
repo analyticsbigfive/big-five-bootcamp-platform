@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-server'
 import { getMailchimpService } from '@/lib/mailchimp'
 import { generatePromoCode } from '@/lib/promo-codes'
 import { isBlockedEmail } from '@/lib/disposable-emails'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -38,6 +39,18 @@ async function getKeynoteSettings() {
 }
 
 export async function POST(request: NextRequest) {
+  // Anti-spam : 5 inscriptions / 10 min par IP. Le doublon par email est
+  // déjà géré ci-dessous ; ce rate-limit bloque les bots qui essaient des
+  // emails jetables différents en boucle.
+  const ip = getClientIp(request)
+  const rl = rateLimit(`keynote-register:${ip}`, 5, 10 * 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
+      { status: 429 }
+    )
+  }
+
   let body: Payload
   try {
     body = (await request.json()) as Payload
@@ -99,7 +112,7 @@ export async function POST(request: NextRequest) {
     promoCode = generatePromoCode()
   }
 
-  const ip =
+  const ipForLog =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
     null
@@ -111,7 +124,7 @@ export async function POST(request: NextRequest) {
     last_name: lastName,
     country,
     promo_code: promoCode,
-    ip,
+    ip: ipForLog,
     user_agent: userAgent,
     source: 'keynote-page',
   })

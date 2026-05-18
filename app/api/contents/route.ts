@@ -45,9 +45,15 @@ export async function GET(request: Request) {
     }
 
     if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,brand.ilike.%${search}%`)
+      const { escapeForIlike } = await import('@/lib/search-utils')
+      const s = escapeForIlike(search)
+      if (s) query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%,brand.ilike.%${s}%`)
     }
-    if (brand) query = query.ilike('brand', `%${brand}%`)
+    if (brand) {
+      const { escapeForIlike } = await import('@/lib/search-utils')
+      const b = escapeForIlike(brand)
+      if (b) query = query.ilike('brand', `%${b}%`)
+    }
     if (category) query = query.eq('category', category)
     if (platform) query = query.contains('platforms', [platform])
 

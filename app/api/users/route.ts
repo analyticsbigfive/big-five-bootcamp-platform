@@ -42,7 +42,9 @@ export async function GET(request: Request) {
       .range((page - 1) * limit, page * limit - 1)
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`)
+      const { escapeForIlike } = await import('@/lib/search-utils')
+      const s = escapeForIlike(search)
+      if (s) query = query.or(`name.ilike.%${s}%,email.ilike.%${s}%`)
     }
     if (role) query = query.eq('role', role)
     if (plan) query = query.eq('plan', plan)

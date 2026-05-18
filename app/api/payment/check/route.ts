@@ -103,12 +103,16 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(10);
 
+    const { escapeForIlike } = await import('@/lib/search-utils');
     if (ref) {
-      query = query.ilike('ref_command', `%${ref}%`);
+      const s = escapeForIlike(ref);
+      if (s) query = query.ilike('ref_command', `%${s}%`);
     } else if (phone) {
-      query = query.ilike('client_phone', `%${phone.replace(/\s/g, '')}%`);
+      const s = escapeForIlike(phone.replace(/\s/g, ''));
+      if (s) query = query.ilike('client_phone', `%${s}%`);
     } else if (email) {
-      query = query.or(`client_email.ilike.%${email}%,user_email.ilike.%${email}%`);
+      const s = escapeForIlike(email);
+      if (s) query = query.or(`client_email.ilike.%${s}%,user_email.ilike.%${s}%`);
     }
 
     const { data: payments, error } = await query;
@@ -116,7 +120,10 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error searching payments:', error);
       return NextResponse.json(
-        { error: 'Erreur lors de la recherche', details: error.message },
+        {
+          error: 'Erreur lors de la recherche',
+          ...(process.env.NODE_ENV !== 'production' ? { details: error.message } : {}),
+        },
         { status: 500 }
       );
     }
@@ -249,7 +256,10 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Payment create/update error:', error);
     return NextResponse.json(
-      { error: 'Erreur', details: error.message },
+      {
+        error: 'Erreur',
+        ...(process.env.NODE_ENV !== 'production' ? { details: error.message } : {}),
+      },
       { status: 500 }
     );
   }

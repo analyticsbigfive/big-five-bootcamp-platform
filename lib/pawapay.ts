@@ -38,10 +38,27 @@ export const PAWAPAY_API_TOKEN = process.env.PAWAPAY_API_TOKEN || ''
  *
  * Doit être en HTTPS en production.
  */
-export const PUBLIC_BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'http://localhost:3000'
+function resolvePublicBaseUrl(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    'http://localhost:3000'
+
+  // En production : refuser localhost / 127.0.0.1 / http (non-HTTPS).
+  // Sinon les callbacks PawaPay et les emails pointent vers localhost et
+  // la prod casse en silence.
+  if (process.env.NODE_ENV === 'production') {
+    if (/localhost|127\.0\.0\.1/i.test(raw) || !/^https:\/\//i.test(raw)) {
+      throw new Error(
+        `NEXT_PUBLIC_APP_URL invalide en production : "${raw}". ` +
+          `Définir une URL HTTPS publique (sans localhost) — utilisée pour les callbacks PawaPay et les emails.`
+      )
+    }
+  }
+  return raw
+}
+
+export const PUBLIC_BASE_URL = resolvePublicBaseUrl()
 
 /**
  * URLs publiques de callback à déclarer dans le Dashboard PawaPay.

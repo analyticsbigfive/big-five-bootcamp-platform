@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { CSVImporter } from "@/components/admin/csv-importer";
 import { cn, getGoogleDriveImageUrl, generateSlug } from "@/lib/utils";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -817,7 +818,7 @@ function CampaignsPageContent() {
                     <h4 className="font-semibold text-gray-800 mb-1">Description</h4>
                     <div
                       className="text-gray-600 prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: previewCampaign.description }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewCampaign.description) }}
                     />
                   </div>
                 )}
@@ -826,7 +827,7 @@ function CampaignsPageContent() {
                     <h4 className="font-semibold text-gray-800 mb-1">Analyse</h4>
                     <div
                       className="text-gray-600 prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: previewCampaign.analyse }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewCampaign.analyse) }}
                     />
                   </div>
                 )}
@@ -835,7 +836,7 @@ function CampaignsPageContent() {
                     <h4 className="font-semibold text-gray-800 mb-1">Comment s'en servir</h4>
                     <div
                       className="text-gray-600 prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: previewCampaign.howToUse }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewCampaign.howToUse) }}
                     />
                   </div>
                 )}
@@ -844,7 +845,7 @@ function CampaignsPageContent() {
                     <h4 className="font-semibold text-gray-800 mb-1">Résumé</h4>
                     <div
                       className="text-gray-600 prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: previewCampaign.summary }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewCampaign.summary) }}
                     />
                   </div>
                 )}
