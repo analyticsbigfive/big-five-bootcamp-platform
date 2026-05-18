@@ -1,0 +1,7 @@
+name = "big-five-bootcamp-platform"
+compatibility_date = "2025-03-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NEXT_PUBLIC_APP_URL = "https://laveiye.com"
+NEXTAUTH_URL = "https://laveiye.com"
