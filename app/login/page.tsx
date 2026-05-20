@@ -3,9 +3,13 @@
 import React from "react"
 
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, Mail, Lock, Sparkles } from "lucide-react"
+import { Turnstile } from "@marsidev/react-turnstile"
+import type { TurnstileInstance } from "@marsidev/react-turnstile"
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -39,6 +43,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [needsVerification, setNeedsVerification] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileInstance>(null)
   const [stats, setStats] = useState({ users: 0, campaigns: 0, brands: 0, countries: 0 })
   const [featuredCampaigns, setFeaturedCampaigns] = useState<Array<{
     id: string
@@ -118,12 +124,21 @@ export default function LoginPage() {
     setIsLoading(true)
     setNeedsVerification(false)
 
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      toast.error("Veuillez compléter la vérification de sécurité")
+      setIsLoading(false)
+      return
+    }
+
     try {
       const supabase = createClient()
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: { captchaToken: captchaToken ?? undefined },
       })
+      turnstileRef.current?.reset()
+      setCaptchaToken(null)
 
       if (error) {
         // Messages d'erreur spécifiques
@@ -234,7 +249,19 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Button type="submit" className="h-11 w-full shadow-lg shadow-primary/25" disabled={isLoading}>
+            {TURNSTILE_SITE_KEY && (
+              <div className="flex justify-center">
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onSuccess={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  onError={() => setCaptchaToken(null)}
+                />
+              </div>
+            )}
+
+            <Button type="submit" className="h-11 w-full shadow-lg shadow-primary/25" disabled={isLoading || (!!TURNSTILE_SITE_KEY && !captchaToken)}>
               {isLoading ? "Connexion..." : "Se connecter"}
             </Button>
 

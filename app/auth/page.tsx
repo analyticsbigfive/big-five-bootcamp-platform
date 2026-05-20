@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,10 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { Turnstile } from '@marsidev/react-turnstile'
+import type { TurnstileInstance } from '@marsidev/react-turnstile'
+
+const TURNSTILE_SITE_KEY = TURNSTILE_SITE_KEY
 
 export default function AuthPage() {
   const router = useRouter()
@@ -20,6 +24,8 @@ export default function AuthPage() {
     name: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileInstance>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,17 +33,32 @@ export default function AuthPage() {
 
     try {
       if (isSignUp) {
-        const { data, error } = await signUp(formData.email, formData.password, formData.name)
-        
-        if (error) throw error
+        const siteKey = TURNSTILE_SITE_KEY
+        if (siteKey && !turnstileToken) {
+          toast.error("Veuillez compléter la vérification de sécurité")
+          setIsSubmitting(false)
+          return
+        }
 
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            turnstileToken: turnstileToken ?? undefined,
+          }),
+        })
+        const json = await res.json()
+        turnstileRef.current?.reset()
+        setTurnstileToken(null)
+        if (!res.ok) throw new Error(json.error || "Erreur lors de la création du compte")
         toast.success('Compte créé avec succès! Vérifiez votre email pour confirmer votre compte.')
         router.push('/dashboard')
       } else {
         const { data, error } = await signIn(formData.email, formData.password)
-        
         if (error) throw error
-
         toast.success('Connexion réussie!')
         router.push('/dashboard')
       }
@@ -127,9 +148,20 @@ export default function AuthPage() {
                 </p>
               )}
             </div>
+            {isSignUp && TURNSTILE_SITE_KEY && (
+              <div className="flex justify-center pt-2">
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onSuccess={setTurnstileToken}
+                  onExpire={() => setTurnstileToken(null)}
+                  onError={() => setTurnstileToken(null)}
+                />
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button 
+            <Button
               type="submit" 
               className="w-full bg-[#F2B33D] text-black hover:bg-[#F2B33D]/90"
               disabled={isSubmitting}

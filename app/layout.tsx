@@ -1,6 +1,5 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
-import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://laveiye.com'
@@ -71,7 +70,6 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
-        <Analytics />
       </body>
     </html>
   )
