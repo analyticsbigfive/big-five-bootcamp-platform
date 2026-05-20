@@ -136,7 +136,7 @@ export default function ExampleCheckout({ sessionId }: ExampleCheckoutProps) {
           <Card className="w-full max-w-md">
             <CardContent className="pt-6 text-center">
               <p className="mb-4">Vous devez être connecté pour procéder au paiement</p>
-              <a href="/auth" className="text-[#0F0F0F] hover:underline">
+              <a href="/login" className="text-[#0F0F0F] hover:underline">
                 Se connecter →
               </a>
             </CardContent>

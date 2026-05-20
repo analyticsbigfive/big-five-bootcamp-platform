@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils"
 
 const DISMISS_KEY = "laveiye-email-confirmation-dismissed-until"
 const DISMISS_TTL_MS = 30 * 60 * 1000 // 30 min
-const HIDDEN_PATHS = ["/login", "/register", "/forgot-password", "/update-password", "/auth"]
+const HIDDEN_PATHS = ["/login", "/register", "/forgot-password", "/update-password"]
 
 function isDismissed(): boolean {
   try {
