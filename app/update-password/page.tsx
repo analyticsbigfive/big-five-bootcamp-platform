@@ -73,60 +73,36 @@ function UpdatePasswordContent() {
           }
         }
 
-        // Écouter les changements d'auth AVANT de vérifier l'utilisateur
-        // (pour capturer les événements PASSWORD_RECOVERY du flux implicite)
-        const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event) => {
-          console.log('Update password - Auth state change:', event);
-          if (mounted && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN')) {
+        // Écouter les changements d'auth — PASSWORD_RECOVERY / SIGNED_IN /
+        // INITIAL_SESSION valident la session. Pas de boucle de retry getUser() :
+        // onAuthStateChange est la source de vérité du flux implicite.
+        const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event, sess) => {
+          if (!mounted) return;
+          if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && sess?.user)) {
             setIsValidSession(true);
           }
         });
         subscription = sub;
 
-        // Vérifier si on a un utilisateur valide (getUser valide le token côté serveur)
+        // 1 seul getUser() pour valider le token côté serveur.
         const { data: { user }, error } = await supabase.auth.getUser();
-
         if (!mounted) return;
-
-        if (error) {
-          console.error('Auth error:', error);
-          // Ne pas immédiatement échouer - attendre un peu au cas où l'auth state change
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          if (!mounted) return;
-          
-          // Re-vérifier après le délai
-          const { data: { user: retryUser }, error: retryError } = await supabase.auth.getUser();
-          if (!mounted) return;
-          
-          if (retryUser) {
-            setIsValidSession(true);
-            return;
-          }
-          
-          setErrorMessage(retryError?.message || error.message);
-          setIsValidSession(false);
-          return;
-        }
 
         if (user) {
           setIsValidSession(true);
           return;
         }
 
-        // Si pas d'utilisateur, attendre un peu (la session peut être en cours de création)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        if (!mounted) return;
-        
-        // Dernier essai
-        const { data: { user: finalUser } } = await supabase.auth.getUser();
-        if (!mounted) return;
-        
-        if (finalUser) {
-          setIsValidSession(true);
-        } else {
-          setErrorMessage('Session non trouvée. Le lien a peut-être expiré.');
-          setIsValidSession(false);
-        }
+        // Sinon laisser ≤3s à onAuthStateChange pour fire PASSWORD_RECOVERY
+        // (cas du flux implicite : le hash met un instant à être consommé).
+        setTimeout(() => {
+          if (!mounted) return;
+          setIsValidSession((prev) => {
+            if (prev !== null) return prev;
+            setErrorMessage(error?.message || 'Session non trouvée. Le lien a peut-être expiré.');
+            return false;
+          });
+        }, 3000);
       } catch (err) {
         console.error('Auth callback error:', err);
         if (mounted) {

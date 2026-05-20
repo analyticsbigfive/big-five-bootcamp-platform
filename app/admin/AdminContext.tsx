@@ -29,11 +29,13 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [campaigns, setCampaigns] = useState<ContentItem[]>([]);
   const [isUsingLocalData, setIsUsingLocalData] = useState(false);
 
-  const [session, setSession] = useState<any>(null);
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const initialCheckDone = useRef(false);
+  const knownUserIdRef = useRef<string | null>(null);
 
   // Utiliser useMemo pour éviter de recréer le client à chaque rendu
   const supabase = useMemo(() => createClient(), []);
@@ -46,12 +48,15 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     const checkUser = async () => {
       try {
         // getUser() valide le token côté serveur (fiable après refresh)
+        // Pas de getSession() — INITIAL_SESSION de onAuthStateChange suffit
+        // si on a besoin du token. On n'expose ici que email / role / id.
         const { data: { user } } = await supabase.auth.getUser();
         if (cancelled) return;
-        // Récupérer la session pour les composants qui en ont besoin
-        const { data: { session } } = await supabase.auth.getSession();
-        if (cancelled) return;
-        setSession(session);
+        if (user?.email) {
+          setAuthEmail(user.email);
+          setAuthUserId(user.id);
+          knownUserIdRef.current = user.id;
+        }
 
         if (user?.email) {
           // D'abord vérifier les métadonnées de l'utilisateur auth
@@ -110,10 +115,21 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
     checkUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       // Ignorer les events tant que getUser() n'a pas fini
       if (!initialCheckDone.current) return;
-      setSession(session);
+      // TOKEN_REFRESHED fire à chaque refresh (≈ 1h) — pas besoin de re-checker
+      // le rôle si le user n'a pas changé. Évite N requêtes DB par session.
+      if (event === "TOKEN_REFRESHED" && session?.user?.id === knownUserIdRef.current) return;
+      if (session?.user?.email) {
+        setAuthEmail(session.user.email);
+        setAuthUserId(session.user.id);
+        knownUserIdRef.current = session.user.id;
+      } else {
+        setAuthEmail(null);
+        setAuthUserId(null);
+        knownUserIdRef.current = null;
+      }
       if (session?.user?.email) {
         // Vérifier d'abord les métadonnées
         const userMetadata = session.user.user_metadata;
@@ -163,7 +179,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
 
   const isLoading = authLoading || campaignsLoading;
-  const isAuthenticated = !!session;
+  const isAuthenticated = !!authEmail;
   const isAdmin = userRole === "admin"; // Check role
 
   // Charger les campagnes depuis Supabase
@@ -509,7 +525,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         isAdmin,
         isLoading,
         isUsingLocalData,
-        userEmail: session?.user?.email || null,
+        userEmail: authEmail,
         logout,
         addCampaign,
         updateCampaign,

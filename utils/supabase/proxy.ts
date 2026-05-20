@@ -20,6 +20,14 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(errorUrl)
     }
 
+    // Sur la home sans erreur Supabase, pas besoin de valider la session
+    // côté middleware → on évite un appel getUser() à chaque navigation.
+    if (request.nextUrl.pathname === '/') {
+        return NextResponse.next({
+            request: { headers: request.headers },
+        })
+    }
+
     let response = NextResponse.next({
         request: {
             headers: request.headers,

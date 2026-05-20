@@ -83,7 +83,8 @@
       "Bash(awk 'NR>=448 && /<div className=\"space-y-4\">/{found=1} found{print NR\": \"$0} /^ \\\\\\)\\\\}/{if\\(found\\){exit}}' app/admin/brand-requests/page.tsx)",
       "Bash(python3 *)",
       "Bash(git config *)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(npx wrangler *)"
     ]
   }
 }

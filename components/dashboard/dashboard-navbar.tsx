@@ -165,8 +165,10 @@ export function DashboardNavbar({
       } catch { /* silencieux */ }
     }
     load()
-    // Polling régulier pour les pages qui ne nous fournissent pas le quota en temps réel.
-    const id = setInterval(load, 15000)
+    // Polling 60s : le quota change uniquement sur action utilisateur
+    // (recherche/filtre soumis). 15s déclenchait 4 appels/min, donc 4 passages
+    // middleware → 4 appels Auth par minute par onglet ouvert.
+    const id = setInterval(load, 60000)
     return () => { cancelled = true; clearInterval(id) }
   }, [profileReady, user, externalSearchQuota])
 

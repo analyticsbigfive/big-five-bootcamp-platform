@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase";
+import { useAuthContext } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -25,22 +25,15 @@ export function ReactionButtons({ campaignId, className }: ReactionButtonsProps)
     userReaction: null,
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const supabase = createClient();
-
-  // Récupérer le token d'authentification
-  const getAuthToken = useCallback(async (): Promise<string | null> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || null;
-  }, [supabase]);
+  // Lit le token directement depuis le contexte — pas de getSession() par carte.
+  const { session } = useAuthContext();
+  const token = session?.access_token || null;
+  const isAuthenticated = !!token;
 
   // Charger les compteurs et la réaction de l'utilisateur
   useEffect(() => {
     async function fetchReactions() {
       try {
-        const token = await getAuthToken();
-        setIsAuthenticated(!!token);
-
         const headers: Record<string, string> = {};
         if (token) {
           headers["Authorization"] = `Bearer ${token}`;
@@ -61,7 +54,7 @@ export function ReactionButtons({ campaignId, className }: ReactionButtonsProps)
     }
 
     fetchReactions();
-  }, [campaignId, getAuthToken]);
+  }, [campaignId, token]);
 
   // Toggle une réaction
   const handleReaction = async (type: "like" | "dislike") => {
@@ -98,7 +91,6 @@ export function ReactionButtons({ campaignId, className }: ReactionButtonsProps)
     });
 
     try {
-      const token = await getAuthToken();
       const res = await fetch(`/api/reactions/${campaignId}`, {
         method: "POST",
         headers: {

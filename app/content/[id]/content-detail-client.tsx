@@ -31,7 +31,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAuthContext } from "@/components/auth-provider";
 import { DashboardNavbar } from "@/components/dashboard/dashboard-navbar";
 import { Navbar } from "@/components/navbar";
-import { createClient } from "@/lib/supabase";
 import { ImageGallery } from "@/components/ui/lightbox";
 import { getCreativeByIdOrSlug, getRelatedCampaigns } from "@/app/actions/creative";
 import { useFavorites } from "@/hooks/use-favorites";
@@ -132,7 +131,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const { isFavorite, toggleFavorite, isAuthenticated } = useFavorites();
   const { isAdmin } = useAuth();
-  const { refreshClickCounters, userPlan: contextUserPlan } = useAuthContext();
+  const { refreshClickCounters, userPlan: contextUserPlan, user: contextUser, loading: contextAuthLoading } = useAuthContext();
   const [isToggling, setIsToggling] = useState(false);
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
   const [readProgress, setReadProgress] = useState(0);
@@ -143,8 +142,9 @@ export default function ContentDetailClient({ id }: { id: string }) {
   const [monthlyExplored, setMonthlyExplored] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
+  // Auth lue depuis le contexte central — pas de getUser() local.
+  const authChecked = !contextAuthLoading;
+  const isUserAuthenticated = !!contextUser;
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [bottomSheetRemaining, setBottomSheetRemaining] = useState(0);
   const trackedRef = useRef(false);
@@ -154,22 +154,6 @@ export default function ContentDetailClient({ id }: { id: string }) {
   const canViewPremium = isAdmin || canAccessPremiumContent(contextUserPlan);
   const isPremiumLocked = isPremiumContent && !canViewPremium;
   const router = useRouter();
-
-  // Vérifier l'état d'authentification directement
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        setIsUserAuthenticated(!!user);
-      } catch {
-        setIsUserAuthenticated(false);
-      } finally {
-        setAuthChecked(true);
-      }
-    };
-    checkAuth();
-  }, []);
 
   // Tracker la consultation UNE FOIS le contenu chargé.
   // Le useRef + sessionStorage flag évitent les doublons (StrictMode dev,

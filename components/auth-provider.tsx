@@ -65,6 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const initialCheckDone = useRef(false)
   const profileFetchedForId = useRef<string | null>(null)
+  const lastRevalidateAt = useRef(0)
+  // Cooldown anti-flood : visibility/focus ne déclenche getUser() qu'au plus
+  // une fois toutes les 5 min. Sinon chaque alt-tab → 1 appel Auth.
+  const REVALIDATE_COOLDOWN_MS = 5 * 60 * 1000
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -230,14 +234,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
           if (newSession?.user) {
+            // TOKEN_REFRESHED fire toutes les ~1h. Si on a déjà le profil
+            // pour ce user, on met juste à jour la session (token) — pas de
+            // re-fetch DB ni de re-set user/profile.
+            if (profileFetchedForId.current === newSession.user.id) {
+              setSession(newSession)
+              return
+            }
             setUser(newSession.user)
             setSession(newSession)
-
-            // Ne re-fetch le profil que si c'est un nouvel user
-            if (profileFetchedForId.current !== newSession.user.id) {
-              await fetchUserProfile(newSession.user)
-              await refreshClickCounters()
-            }
+            await fetchUserProfile(newSession.user)
+            await refreshClickCounters()
           }
         } else if (event === "SIGNED_OUT") {
           setUser(null)
@@ -262,7 +269,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return
 
-    const revalidate = async () => {
+    const revalidate = async (force = false) => {
+      const now = Date.now()
+      if (!force && now - lastRevalidateAt.current < REVALIDATE_COOLDOWN_MS) return
+      lastRevalidateAt.current = now
       try {
         const { data: { user: fresh } } = await supabase.auth.getUser()
         if (!fresh) return
@@ -278,6 +288,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         revalidate()
       }
     }
+    // Le broadcast inter-onglets (upgrade Pro dans l'onglet B) doit forcer la
+    // revalidation même si cooldown actif — sinon onglet A reste sur Free.
 
     let channel: BroadcastChannel | null = null
     try {
@@ -285,7 +297,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         channel = new BroadcastChannel("auth-profile")
         channel.onmessage = (ev) => {
           if (ev.data?.type === "profile-changed" && ev.data.userId === user.id) {
-            revalidate()
+            revalidate(true)
           }
         }
       }

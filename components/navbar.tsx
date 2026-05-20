@@ -1,12 +1,13 @@
 ﻿"use client"
 
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Menu, X, ArrowRight, Heart, LibraryBig, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useAuthContext } from "@/components/auth-provider"
 
 type PlanLabel = "Découverte" | "Basic" | "Pro"
 
@@ -65,17 +66,23 @@ function PlanBadge({ plan }: { plan: string }) {
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState<string>("")
-  const [userName, setUserName] = useState<string>("")
-  const [userPlan, setUserPlan] = useState<string>("")
   const [logoUrl, setLogoUrl] = useState("/niggaz/normalGlogo.png")
-  const initialCheckDone = useRef(false)
 
+  // Tout vient du contexte central — pas de getUser() ni onAuthStateChange ici.
+  const { user, userProfile, isAuthenticated, userPlan } = useAuthContext()
+
+  const userName =
+    (userProfile as any)?.full_name ||
+    userProfile?.name ||
+    user?.user_metadata?.name ||
+    user?.email?.split("@")[0] ||
+    ""
+  const avatarUrl =
+    (userProfile as any)?.avatar_url || user?.user_metadata?.avatar_url || ""
+
+  // Charger le logo depuis site_settings (1x au mount, pas lié à l'auth)
   useEffect(() => {
     const supabase = createClient()
-
-    // Charger le logo depuis site_settings
     supabase
       .from("site_settings")
       .select("value")
@@ -84,51 +91,6 @@ export function Navbar() {
       .then(({ data }) => {
         if (data?.value) setLogoUrl(data.value)
       })
-
-    const loadProfile = async (userId: string, fallbackName: string, fallbackAvatar: string) => {
-      const { data } = await supabase
-        .from("users")
-        .select("avatar_url, full_name, name, plan")
-        .eq("id", userId)
-        .single()
-      setAvatarUrl(data?.avatar_url || fallbackAvatar || "")
-      setUserName(data?.full_name || data?.name || fallbackName || "")
-      setUserPlan((data?.plan as string) || "")
-    }
-
-    // Vérifier l'utilisateur via getUser() (valide le token côté serveur)
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setIsAuthenticated(!!user)
-      if (user) {
-        loadProfile(
-          user.id,
-          user.user_metadata?.name || user.email?.split("@")[0] || "",
-          user.user_metadata?.avatar_url || ""
-        )
-      }
-      initialCheckDone.current = true
-    })
-
-    // Écouter les changements APRÈS l'init (login, logout, token refresh)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      if (!initialCheckDone.current) return
-      setIsAuthenticated(!!session?.user)
-      if (session?.user) {
-        loadProfile(
-          session.user.id,
-          session.user.user_metadata?.name || session.user.email?.split("@")[0] || "",
-          session.user.user_metadata?.avatar_url || ""
-        )
-      } else {
-        setAvatarUrl("")
-        setUserName("")
-        setUserPlan("")
-      }
-    })
-
-    return () => subscription.unsubscribe()
   }, [])
 
   const initials = userName ? userName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "?"
