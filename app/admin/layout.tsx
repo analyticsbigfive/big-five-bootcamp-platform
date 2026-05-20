@@ -22,7 +22,6 @@ import {
   Bell,
   Mail,
   Palette,
-  CreditCard,
   Building2,
   CalendarHeart,
 } from "lucide-react";
@@ -40,7 +39,6 @@ const sidebarLinks = [
   { href: "/admin/keynote", label: "Keynote 21 mai", icon: Megaphone, description: "Inscriptions & codes promo" },
   { href: "/admin/decrypte", label: "#BigFiveDecrypte", icon: Sparkles, description: "Inscriptions session Pro" },
   { href: "/admin/branding", label: "Branding", icon: Palette, description: "Logo et identité" },
-  { href: "/admin/payment-methods", label: "Paiements", icon: CreditCard, description: "Moyens de paiement" },
   { href: "/admin/settings", label: "Paramètres", icon: Settings, description: "Configuration" },
 ];
 
