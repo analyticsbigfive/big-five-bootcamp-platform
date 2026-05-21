@@ -122,7 +122,7 @@ export default function RegisterPage() {
           description:
             "Un email de confirmation a été envoyé à " +
             email +
-            ". Clique sur le lien pour activer ton compte (vérifie aussi les spams).",
+            ". Clique sur le lien pour activer ton compte. Vérifie aussi tes spams et ajoute support@laveiye.com à tes expéditeurs de confiance.",
           duration: 10000,
         })
         setSignupSent(true)
