@@ -261,6 +261,18 @@ export function UserRow({ user, payments, favoritesCount }: UserRowProps) {
                     </span>
                 </TableCell>
                 <TableCell>
+                    {user.is_beta_tester ? (
+                        <span
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-800"
+                            title="Compte importé en masse (cohorte / bêta-testeur)"
+                        >
+                            Bêta
+                        </span>
+                    ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                </TableCell>
+                <TableCell>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         user.status === 'active'
                             ? 'bg-green-100 text-green-800'
@@ -331,7 +343,7 @@ export function UserRow({ user, payments, favoritesCount }: UserRowProps) {
             {/* Expanded section: payment history + subscription management */}
             {isExpanded && (
                 <TableRow>
-                    <TableCell colSpan={10} className="bg-muted/30 p-0">
+                    <TableCell colSpan={11} className="bg-muted/30 p-0">
                         <div className="px-6 py-4">
                             {/* Role management */}
                             <div className="mb-3 flex items-center gap-3 rounded-lg border bg-card p-3">

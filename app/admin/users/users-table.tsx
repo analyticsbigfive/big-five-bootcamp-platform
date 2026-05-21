@@ -55,11 +55,13 @@ export function UsersTable({ users, paymentsByEmail, favoritesCounts }: UsersTab
       const email = String(u.email || "").toLowerCase()
       const role = String(u.role || "").toLowerCase()
       const plan = String(u.plan || "").toLowerCase()
+      const beta = u.is_beta_tester ? "beta bêta beta-tester" : ""
       return (
         name.includes(q) ||
         email.includes(q) ||
         role.includes(q) ||
-        plan.includes(q)
+        plan.includes(q) ||
+        beta.includes(q)
       )
     })
   }, [users, search])
@@ -126,6 +128,7 @@ export function UsersTable({ users, paymentsByEmail, favoritesCounts }: UsersTab
               <TableHead>Email</TableHead>
               <TableHead>Rôle</TableHead>
               <TableHead>Plan</TableHead>
+              <TableHead>Bêta</TableHead>
               <TableHead>Accès</TableHead>
               <TableHead>Abonnement</TableHead>
               <TableHead>Favoris</TableHead>
@@ -136,7 +139,7 @@ export function UsersTable({ users, paymentsByEmail, favoritesCounts }: UsersTab
           <TableBody>
             {pageRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                   Aucun utilisateur trouvé.
                 </TableCell>
               </TableRow>

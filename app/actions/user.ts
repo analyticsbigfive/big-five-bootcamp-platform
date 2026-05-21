@@ -379,6 +379,8 @@ export async function bulkCreateUsers(payload: {
                 }
 
                 // 2) Upsert dans public.users avec plan + dates d'abonnement.
+                // `is_beta_tester = true` marque les comptes créés par l'ajout
+                // en masse (cohortes / bêta-testeurs invités par un admin).
                 const { error: profileErr } = await supabase.from('users').upsert(
                     {
                         id: userId,
@@ -387,6 +389,7 @@ export async function bulkCreateUsers(payload: {
                         role: 'user',
                         status: 'active',
                         plan,
+                        is_beta_tester: true,
                         ...subscriptionPatch,
                     },
                     { onConflict: 'id' }

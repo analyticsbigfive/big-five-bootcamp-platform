@@ -61,9 +61,21 @@ export class MailchimpService {
       settings[row.key] = row.value
     })
 
-    // Déchiffrer la clé API si elle est chiffrée
+    // Déchiffrer la clé API si elle est chiffrée.
+    // Si decrypt() retourne '' alors que rawApiKey n'est pas vide, c'est que
+    // le déchiffrement a échoué (clé ENCRYPTION_KEY changée/absente, données
+    // corrompues) — on signalera plus tard une erreur actionnable plutôt que
+    // de passer un ciphertext au validateur regex (qui produisait le
+    // trompeur "Clé API Mailchimp invalide (format attendu: xxxxx-us14)").
     const rawApiKey = settings['mailchimp_api_key'] || ''
-    const apiKey = isEncrypted(rawApiKey) ? decrypt(rawApiKey) : rawApiKey
+    let apiKey = ''
+    if (rawApiKey) {
+      if (isEncrypted(rawApiKey)) {
+        apiKey = decrypt(rawApiKey) // '' si échec
+      } else {
+        apiKey = rawApiKey
+      }
+    }
 
     this.config = {
       apiKey,
@@ -71,6 +83,12 @@ export class MailchimpService {
       fromName: settings['mailchimp_from_name'] || '',
       fromEmail: settings['mailchimp_from_email'] || '',
       defaultTag: settings['mailchimp_default_tag'] || '',
+    }
+
+    // Si une valeur chiffrée existait mais qu'on n'a pas pu la déchiffrer,
+    // attacher un drapeau pour que les appelants donnent un message clair.
+    if (rawApiKey && !apiKey) {
+      (this.config as MailchimpConfig & { apiKeyUnreadable?: boolean }).apiKeyUnreadable = true
     }
 
     return this.config
@@ -246,6 +264,17 @@ export class MailchimpService {
     if (!this.config) await this.loadConfig()
     const config = this.config!
 
+    const unreadable = (config as MailchimpConfig & { apiKeyUnreadable?: boolean }).apiKeyUnreadable
+    if (unreadable) {
+      return {
+        success: false,
+        synced: 0,
+        errors: [
+          'La clé API Mailchimp stockée est illisible (probablement chiffrée avec une clé ENCRYPTION_KEY différente). Veuillez la resaisir dans Paramètres → Mailchimp puis cliquer sur Enregistrer.',
+        ],
+      }
+    }
+
     if (!config.apiKey || !config.audienceId) {
       return { success: false, synced: 0, errors: ['Configuration Mailchimp incomplète'] }
     }
@@ -343,6 +372,15 @@ export class MailchimpService {
   }): Promise<{ ok: true; status: string } | { ok: false; error: string }> {
     if (!this.config) await this.loadConfig()
     const config = this.config!
+
+    const unreadable = (config as MailchimpConfig & { apiKeyUnreadable?: boolean }).apiKeyUnreadable
+    if (unreadable) {
+      return {
+        ok: false,
+        error:
+          'Clé API Mailchimp illisible (resaisissez-la dans Paramètres → Mailchimp et enregistrez).',
+      }
+    }
 
     if (!config.apiKey) {
       return { ok: false, error: 'Clé API Mailchimp non configurée' }

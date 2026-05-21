@@ -21,6 +21,7 @@ Journal des scripts SQL à appliquer dans Supabase SQL Editor.
 | 8 | `security-rls-fixes.sql` | Patchs RLS divers | ☐ |
 | 9 | `fix-subscription-audit.sql` | Audit + correctifs subscription | ☐ |
 | 10 | `pending-plan-downgrade.sql` | Colonnes `pending_plan*` pour downgrade différé | ☐ |
+| 11 | `add-is-beta-tester-to-users.sql` | Colonne `users.is_beta_tester` (cohortes / bêta-testeurs ajoutés en masse) | ☐ |
 
 ## Scripts ponctuels (one-shot)
 
