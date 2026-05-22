@@ -19,6 +19,10 @@ import {
   isAllowedPawaPayIP,
   type PawaPayDepositCallback,
 } from '@/lib/pawapay'
+import {
+  notifyPaymentSuccess,
+  notifyPromoCodeRedeemed,
+} from '@/lib/notifications'
 
 // PawaPay doit pouvoir accéder à cette route sans auth. On désactive aussi
 // le cache et on force un rendu dynamique pour ne rien louper.
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
     // 2. Récupérer le paiement (idempotence : on ne met à jour que si le statut change)
     const { data: payment, error: fetchError } = await (supabaseAdmin as any)
       .from('payments')
-      .select('id, status, metadata, user_email, amount')
+      .select('id, status, metadata, user_email, amount, currency, ref_command')
       .eq('ref_command', payload.depositId)
       .maybeSingle()
 
@@ -284,6 +288,25 @@ async function activateUserSubscription(payment: {
         '\u2014 first phase:',
         firstPlan
       )
+
+      // Notifications transactionnelles (best-effort)
+      const refId = (payment as any).ref_command || payment.id
+      void notifyPaymentSuccess({
+        userId: metadata.userId,
+        plan: firstPlan,
+        amount: typeof payment.amount === 'number' ? payment.amount : 0,
+        currency: (payment as any).currency || 'XOF',
+        reference: String(refId),
+        billingPeriod: metadata.billing,
+      })
+      if (metadata.promo_code) {
+        void notifyPromoCodeRedeemed({
+          userId: metadata.userId,
+          promoCode: String(metadata.promo_code),
+          plan: firstPlan,
+          bonusLabel: bonus.label,
+        })
+      }
       return
     }
 
@@ -337,6 +360,17 @@ async function activateUserSubscription(payment: {
       .eq('id', metadata.userId)
 
     console.log('✅ Subscription activated (pawapay) for user:', metadata.userId, '— plan:', planName)
+
+    // Notification transactionnelle (best-effort)
+    const refId = (payment as any).ref_command || payment.id
+    void notifyPaymentSuccess({
+      userId: metadata.userId,
+      plan: planName,
+      amount: typeof payment.amount === 'number' ? payment.amount : 0,
+      currency: (payment as any).currency || 'XOF',
+      reference: String(refId),
+      billingPeriod: metadata.billing,
+    })
   } catch (e) {
     console.error('Error activating subscription from pawapay callback:', e)
   }

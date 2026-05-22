@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Building2, Loader2, ArrowLeft, MessageSquare, GitMerge, CheckSquare, Square, Trash2, Copy, Check, Upload, FileText, CreditCard, ShieldCheck, X, Search, Users } from "lucide-react"
+import { Building2, Loader2, ArrowLeft, MessageSquare, GitMerge, CheckSquare, Square, Trash2, Copy, Check, Upload, FileText, CreditCard, ShieldCheck, X, Search, Users, Bell } from "lucide-react"
 import Link from "next/link"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { BrandRequestCampaignsManager } from "@/components/admin/brand-request-campaigns-manager"
@@ -97,6 +97,37 @@ export default function AdminBrandRequestsPage() {
 
   // Suppression d'une demande
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // Notification équipe
+  const [notifyingId, setNotifyingId] = useState<string | null>(null)
+
+  const handleNotifyTeam = async (req: BrandRequest) => {
+    const message = window.prompt(
+      `Notifier l'équipe (cossi, jeremie, yannick, jeanluc) à propos de « ${req.brand_name} » ?\n\n` +
+      `Message optionnel à inclure :`,
+      ''
+    )
+    if (message === null) return // Annulé
+
+    setNotifyingId(req.id)
+    try {
+      const res = await fetch('/api/admin/brand-requests/notify-team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandRequestId: req.id, message: message.trim() || undefined }),
+      })
+      const data = await res.json().catch(() => ({} as any))
+      if (!res.ok) {
+        alert(data?.error || 'Erreur lors de l\'envoi.')
+      } else {
+        alert(`Email envoyé à : ${(data.recipients || []).join(', ')}`)
+      }
+    } catch {
+      alert('Erreur réseau.')
+    } finally {
+      setNotifyingId(null)
+    }
+  }
 
   useEffect(() => { loadRequests() }, [])
 
@@ -894,6 +925,19 @@ export default function AdminBrandRequestsPage() {
                     <Button size="sm" variant="outline" className="text-xs"
                       onClick={() => startEdit(req)}>
                       <MessageSquare className="h-3 w-3 mr-1" />Répondre
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+                      disabled={notifyingId === req.id}
+                      onClick={() => handleNotifyTeam(req)}
+                      title="Envoyer un email à l'équipe (cossi, jeremie, yannick, jeanluc)"
+                    >
+                      {notifyingId === req.id
+                        ? <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        : <Bell className="h-3 w-3 mr-1" />}
+                      Notifier équipe
                     </Button>
                     <Button
                       size="sm"

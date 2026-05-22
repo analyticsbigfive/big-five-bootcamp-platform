@@ -18,6 +18,7 @@ import {
   Activity
 } from "lucide-react";
 import { useAdmin } from "./AdminContext";
+import { RevenueSummary } from "./revenue-summary";
 
 export default function AdminDashboardPage() {
   const { campaigns } = useAdmin();
@@ -185,6 +186,9 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Revenue Summary */}
+      <RevenueSummary />
 
       {/* Recent Activity */}
       <div>

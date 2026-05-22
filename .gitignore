@@ -18,6 +18,8 @@ yarn-error.log*
 
 # env files
 .env*
+.dev.vars
+.dev.vars.*
 
 # database
 *.db

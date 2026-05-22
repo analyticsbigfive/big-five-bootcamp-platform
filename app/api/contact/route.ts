@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
+import { sendMail } from '@/lib/gmail-sender'
 import { getSupabaseAdmin } from '@/lib/supabase-server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
-// Valeurs par défaut
-// IMPORTANT : Avec onboarding@resend.dev, Resend n'envoie qu'au propriétaire du compte.
-// Pour envoyer à d'autres destinataires, vérifiez un domaine sur resend.com/domains
-const DEFAULT_TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'analyticsbigfive@gmail.com'
-const DEFAULT_FROM_EMAIL = process.env.CONTACT_FROM_EMAIL || 'Laveiye <onboarding@resend.dev>'
+const DEFAULT_TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'support@laveiye.com'
+const DEFAULT_FROM_EMAIL =
+  process.env.GMAIL_FROM || process.env.CONTACT_FROM_EMAIL || 'Laveiye <support@laveiye.com>'
+
+// Cc permanent sur chaque message de contact (équipe Big Five).
+const CONTACT_CC = [
+  'cossi@bigfiveabidjan.com',
+  'yannick@bigfiveabidjan.com',
+  'jeanluc@bigfiveabidjan.com',
+]
 
 // Récupérer les adresses email depuis Supabase (configurable depuis l'admin)
 async function getContactEmails() {
@@ -67,15 +72,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!process.env.RESEND_API_KEY) {
-      console.error('RESEND_API_KEY non configurée')
+    if (!process.env.GMAIL_PRIVATE_KEY) {
+      console.error('GMAIL_PRIVATE_KEY non configurée')
       return NextResponse.json(
         { error: 'Service email non configuré' },
         { status: 500 }
       )
     }
 
-    const resend = new Resend(process.env.RESEND_API_KEY)
     const contactEmails = await getContactEmails()
 
     const esc = (s: string) =>
@@ -91,9 +95,10 @@ export async function POST(request: NextRequest) {
     const msg = esc(message)
 
     // 1. Email principal à l'équipe
-    const { data, error } = await resend.emails.send({
+    const result = await sendMail({
       from: contactEmails.from,
       to: contactEmails.to,
+      cc: CONTACT_CC,
       replyTo: email,
       subject: `Nouveau message de ${fn} ${ln}`,
       html: `
@@ -126,8 +131,8 @@ export async function POST(request: NextRequest) {
       `,
     })
 
-    if (error) {
-      console.error('Resend error:', error)
+    if (!result.ok) {
+      console.error('Gmail send error:', result.error)
       return NextResponse.json(
         { error: "Erreur lors de l'envoi de l'email" },
         { status: 500 }
@@ -136,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Accusé de réception à l'expéditeur (non bloquant)
     try {
-      await resend.emails.send({
+      await sendMail({
         from: contactEmails.from,
         to: email,
         subject: 'Confirmation : nous avons bien reçu votre message',
@@ -171,7 +176,7 @@ export async function POST(request: NextRequest) {
       console.error('Erreur envoi accusé de réception:', confirmError)
     }
 
-    return NextResponse.json({ success: true, id: data?.id })
+    return NextResponse.json({ success: true, id: result.id })
   } catch (err) {
     console.error('Contact form error:', err)
     return NextResponse.json(

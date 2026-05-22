@@ -234,6 +234,32 @@ async function pawapayFetch<T>(
 }
 
 // ============================================================================
+// Wallet balances
+// ============================================================================
+
+export interface PawaPayWalletBalance {
+  country: string
+  provider: string
+  currency: string
+  balance: string
+}
+
+export interface PawaPayWalletBalancesResponse {
+  balances: PawaPayWalletBalance[]
+}
+
+/**
+ * Fetch live PawaPay wallet balances per country/provider/currency.
+ * Source of truth for available payout funds. Should not be called on the
+ * hot render path — wire through a server route with caching.
+ */
+export async function getWalletBalances() {
+  return pawapayFetch<PawaPayWalletBalancesResponse>('/v2/wallet-balances', {
+    method: 'GET',
+  })
+}
+
+// ============================================================================
 // Initiate — Deposits / Payouts / Refunds
 // ============================================================================
 

@@ -12,6 +12,8 @@
     "enabled": true
   },
   "vars": {
-    "PAWAPAY_ENV": "production"
+    "PAWAPAY_ENV": "production",
+    "GMAIL_IMPERSONATE_USER": "support@laveiye.com",
+    "GMAIL_FROM": "Laveiye <support@laveiye.com>"
   }
 }

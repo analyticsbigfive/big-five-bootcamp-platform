@@ -13,6 +13,7 @@ import {
   sendBrandRequestEmail,
   createBrandRequestNotification,
 } from '@/lib/brand-request-emails'
+import { notifyBrandRequestSubmitted } from '@/lib/notifications'
 
 export const dynamic = 'force-dynamic'
 
@@ -239,6 +240,14 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           kind: 'submission_received',
           brandName: data.brand_name,
+        }),
+        notifyBrandRequestSubmitted({
+          userId: user.id,
+          brandName: data.brand_name,
+          brandRequestId: data.id,
+          brandCountry: countriesRaw[0] ?? null,
+          brandSector: sectorsRaw[0] ?? null,
+          notes: typeof notes === 'string' ? notes.trim() || null : null,
         }),
       ]).catch((e) => console.error('[brand-requests] post-submit notify failed:', e))
     }

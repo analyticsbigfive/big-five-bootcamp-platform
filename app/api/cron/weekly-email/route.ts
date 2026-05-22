@@ -16,6 +16,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { sendMail } from '@/lib/gmail-sender'
 
 export const dynamic = 'force-dynamic'
 
@@ -244,42 +245,28 @@ export async function GET(request: NextRequest) {
 </html>
     `
 
-    // 5. Envoyer les emails via Resend
-    const resendApiKey = process.env.RESEND_API_KEY
+    // 5. Envoyer les emails via Gmail API
     let sent = 0
     let failed = 0
 
-    if (resendApiKey) {
+    if (process.env.GMAIL_PRIVATE_KEY) {
+      const fromAddr = process.env.GMAIL_FROM || 'Laveiye <support@laveiye.com>'
       for (const user of users) {
-        try {
-          const response = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${resendApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: 'Laveiye <noreply@bigfiveabidjan.com>',
-              to: user.email,
-              subject: `${newCampaigns.length} nouvelles campagnes cette semaine — ${industriesList.slice(0, 3).join(', ')}`,
-              html: emailHtml,
-            }),
-          })
-
-          if (response.ok) {
-            sent++
-          } else {
-            failed++
-            const err = await response.text()
-            console.warn(`Email failed for ${user.email}: ${response.status} ${err}`)
-          }
-        } catch (emailError) {
+        const result = await sendMail({
+          from: fromAddr,
+          to: user.email,
+          subject: `${newCampaigns.length} nouvelles campagnes cette semaine — ${industriesList.slice(0, 3).join(', ')}`,
+          html: emailHtml,
+        })
+        if (result.ok) {
+          sent++
+        } else {
           failed++
-          console.warn(`Email error for ${user.email}:`, emailError)
+          console.warn(`Email failed for ${user.email}: ${result.error}`)
         }
       }
     } else {
-      console.log(`[SIMULATION] Envoi de ${users.length} emails (RESEND_API_KEY non configuré)`)
+      console.log(`[SIMULATION] Envoi de ${users.length} emails (GMAIL_PRIVATE_KEY non configuré)`)
       sent = users.length
     }
 

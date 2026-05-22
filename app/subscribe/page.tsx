@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, Check, Lock, Sparkles, Loader2, Calendar, Star, Zap, Phone, Tag, X } from "lucide-react"
@@ -124,6 +124,16 @@ export default function SubscribePage() {
         const storedBilling = window.localStorage.getItem('laveiye:selectedBilling')
         if (storedBilling === "annual") setIsAnnual(true)
       }
+      // Code promo via URL (?promo=LAVEIYE) ou localStorage (survit au register flow)
+      const urlPromo = searchParams.get("promo")
+      const stored = window.localStorage.getItem('laveiye:promoCode')
+      const code = (urlPromo || stored || '').trim().toUpperCase()
+      if (code) {
+        setPromoInput(code)
+        if (urlPromo) {
+          window.localStorage.setItem('laveiye:promoCode', code)
+        }
+      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -176,6 +186,8 @@ export default function SubscribePage() {
         if (plan) window.localStorage.setItem('laveiye:selectedPlan', plan)
         const billing = searchParams.get('billing')
         if (billing) window.localStorage.setItem('laveiye:selectedBilling', billing)
+        const promo = searchParams.get('promo')
+        if (promo) window.localStorage.setItem('laveiye:promoCode', promo.toUpperCase())
       } catch {}
       router.push(`/register?redirect=${encodeURIComponent(redirect)}`)
     }
@@ -269,7 +281,21 @@ export default function SubscribePage() {
     setAppliedPromo(null)
     setPromoInput("")
     setPromoError(null)
+    try { window.localStorage.removeItem('laveiye:promoCode') } catch {}
   }
+
+  // Auto-applique le code promo quand on arrive avec ?promo=… et que
+  // l'utilisateur est connecté. Évite que l'utilisateur ait à cliquer
+  // sur « Appliquer » (frictionless WhatsApp flow).
+  const autoApplyAttempted = useRef(false)
+  useEffect(() => {
+    if (autoApplyAttempted.current) return
+    if (!user?.email) return
+    if (!promoInput.trim() || appliedPromo) return
+    autoApplyAttempted.current = true
+    handleApplyPromo()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, promoInput])
 
   const PLAN_PRICES_MAP: Record<PlanChoice, { monthly: number; annual: number }> = {
     discovery: { monthly: 1000, annual: 10000 },

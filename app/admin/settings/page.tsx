@@ -6,8 +6,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Save, Lock, Eye, EyeOff, Loader2, Mail, RotateCcw, Users, ShoppingCart, ExternalLink } from "lucide-react";
+import { Save, Lock, Eye, EyeOff, Loader2, Mail, ShoppingCart, ExternalLink, AlertTriangle, Send } from "lucide-react";
 import { toast } from "sonner";
+import { parseMaintenanceMode, serializeMaintenanceMode } from "@/lib/maintenance-mode";
+
+const parseBooleanSetting = (value: unknown, fallback: boolean) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") return fallback;
+
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on", "enabled"].includes(normalized)) return true;
+  if (["0", "false", "no", "off", "disabled"].includes(normalized)) return false;
+
+  return fallback;
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SettingsPage() {
   // Chariow widget settings
@@ -22,10 +36,13 @@ export default function SettingsPage() {
     emailNotifications: true,
     publicAccess: true,
   });
+  const [isLoadingGeneralSettings, setIsLoadingGeneralSettings] = useState(true);
+  const [isSavingGeneralSettings, setIsSavingGeneralSettings] = useState(false);
 
   // Email contact settings
   const [contactToEmail, setContactToEmail] = useState("");
   const [contactFromEmail, setContactFromEmail] = useState("");
+  const [resendInboundForwardTo, setResendInboundForwardTo] = useState("cossi@bigfiveabidjan.com");
   const [isLoadingEmailSettings, setIsLoadingEmailSettings] = useState(true);
   const [isSavingEmailSettings, setIsSavingEmailSettings] = useState(false);
 
@@ -36,8 +53,9 @@ export default function SettingsPage() {
         const res = await fetch("/api/admin/settings");
         const data = await res.json();
         if (data.settings) {
-          setContactToEmail(data.settings.contact_to_email || "contact@laveiye.com");
-          setContactFromEmail(data.settings.contact_from_email || "Laveiye <onboarding@resend.dev>");
+          setContactToEmail(data.settings.contact_to_email || "support@laveiye.com");
+          setContactFromEmail(data.settings.contact_from_email || "Laveiye <noreply@laveiye.com>");
+          setResendInboundForwardTo(data.settings.resend_inbound_forward_to || "cossi@bigfiveabidjan.com");
         }
       } catch {
         console.error("Erreur chargement paramètres email");
@@ -66,6 +84,28 @@ export default function SettingsPage() {
     fetchChariowSettings();
   }, []);
 
+  useEffect(() => {
+    const fetchGeneralSettings = async () => {
+      try {
+        const res = await fetch("/api/admin/settings");
+        const data = await res.json();
+        if (data.settings) {
+          setSettings({
+            maintenanceMode: parseMaintenanceMode(data.settings.maintenance_mode, false),
+            allowRegistrations: parseBooleanSetting(data.settings.allow_registrations, true),
+            emailNotifications: parseBooleanSetting(data.settings.email_notifications, true),
+            publicAccess: parseBooleanSetting(data.settings.public_access, true),
+          });
+        }
+      } catch {
+        console.error("Erreur chargement paramètres généraux");
+      } finally {
+        setIsLoadingGeneralSettings(false);
+      }
+    };
+    fetchGeneralSettings();
+  }, []);
+
   const handleSaveChariow = async () => {
     setIsSavingChariow(true);
     try {
@@ -92,6 +132,12 @@ export default function SettingsPage() {
   };
 
   const handleSaveEmailSettings = async () => {
+    const forwardTo = resendInboundForwardTo.trim();
+    if (!EMAIL_RE.test(forwardTo)) {
+      toast.error("Adresse de forward Resend invalide");
+      return;
+    }
+
     setIsSavingEmailSettings(true);
     try {
       const res = await fetch("/api/admin/settings", {
@@ -101,6 +147,7 @@ export default function SettingsPage() {
           settings: {
             contact_to_email: contactToEmail,
             contact_from_email: contactFromEmail,
+            resend_inbound_forward_to: forwardTo,
           },
         }),
       });
@@ -118,23 +165,33 @@ export default function SettingsPage() {
     }
   };
 
-  // Reset vues Découverte
-  const [isResettingViews, setIsResettingViews] = useState(false);
-  const [resetResult, setResetResult] = useState<string | null>(null);
+  // Email test (Gmail API relay)
+  const [testEmailTo, setTestEmailTo] = useState("");
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<string | null>(null);
 
-  const handleResetFreeViews = async () => {
-    setIsResettingViews(true);
-    setResetResult(null);
+  const handleSendTestEmail = async () => {
+    const target = testEmailTo.trim();
+    if (!EMAIL_RE.test(target)) {
+      toast.error("Adresse email invalide");
+      return;
+    }
+    setIsSendingTestEmail(true);
+    setTestEmailResult(null);
     try {
-      const res = await fetch("/api/admin/reset-free-views", { method: "POST" });
+      const res = await fetch("/api/admin/send-test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: target, name: "Test admin" }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur");
-      toast.success(data.message);
-      setResetResult(data.message);
+      toast.success(`Email envoyé à ${target}`);
+      setTestEmailResult(`Email envoyé à ${target} (ID: ${data.id || "n/a"})`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur lors de la réinitialisation");
+      toast.error(err instanceof Error ? err.message : "Erreur lors de l'envoi");
     } finally {
-      setIsResettingViews(false);
+      setIsSendingTestEmail(false);
     }
   };
 
@@ -146,8 +203,37 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  const handleSave = () => {
-    toast.success("Paramètres enregistrés avec succès");
+  const handleSaveGeneralSettings = async () => {
+    setIsSavingGeneralSettings(true);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          settings: {
+            maintenance_mode: serializeMaintenanceMode(settings.maintenanceMode),
+            allow_registrations: String(settings.allowRegistrations),
+            email_notifications: String(settings.emailNotifications),
+            public_access: String(settings.publicAccess),
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Erreur");
+      }
+
+      toast.success(
+        settings.maintenanceMode
+          ? "Mode maintenance activé"
+          : "Mode maintenance désactivé"
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur lors de la sauvegarde");
+    } finally {
+      setIsSavingGeneralSettings(false);
+    }
   };
 
   const handleChangePassword = async () => {
@@ -312,7 +398,7 @@ export default function SettingsPage() {
               <div>
                 <CardTitle className="text-gray-900">Emails de contact</CardTitle>
                 <CardDescription className="text-gray-600">
-                  Configurez les adresses email utilisées par le formulaire de contact
+                  Configurez les adresses email et le forward Resend
                 </CardDescription>
               </div>
             </div>
@@ -333,7 +419,7 @@ export default function SettingsPage() {
                     type="email"
                     value={contactToEmail}
                     onChange={(e) => setContactToEmail(e.target.value)}
-                    placeholder="contact@laveiye.com"
+                    placeholder="support@laveiye.com"
                   />
                 </div>
                 <div>
@@ -344,12 +430,23 @@ export default function SettingsPage() {
                     type="text"
                     value={contactFromEmail}
                     onChange={(e) => setContactFromEmail(e.target.value)}
-                    placeholder="Laveiye <onboarding@resend.dev>"
+                    placeholder="Laveiye <noreply@laveiye.com>"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="resendInboundForwardTo" className="text-gray-900">Email de réception du forward Resend</Label>
+                  <p className="text-xs text-gray-500 mb-1.5">L'adresse qui reçoit les emails entrants de support@laveiye.com via le webhook Resend</p>
+                  <Input
+                    id="resendInboundForwardTo"
+                    type="email"
+                    value={resendInboundForwardTo}
+                    onChange={(e) => setResendInboundForwardTo(e.target.value)}
+                    placeholder="cossi@bigfiveabidjan.com"
                   />
                 </div>
                 <Button
                   onClick={handleSaveEmailSettings}
-                  disabled={isSavingEmailSettings || !contactToEmail}
+                  disabled={isSavingEmailSettings || !contactToEmail || !resendInboundForwardTo}
                   className="bg-[#F2B33D] hover:bg-[#F2B33D] text-white shadow-lg shadow-[#F2B33D]/25"
                 >
                   {isSavingEmailSettings ? (
@@ -473,9 +570,19 @@ export default function SettingsPage() {
               </div>
               <Switch
                 checked={settings.maintenanceMode}
+                disabled={isLoadingGeneralSettings || isSavingGeneralSettings}
                 onCheckedChange={(checked) => setSettings({ ...settings, maintenanceMode: checked })}
               />
             </div>
+            {settings.maintenanceMode && (
+              <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  Le site public affichera la page de maintenance. Les routes
+                  administrateur restent accessibles pour gérer la plateforme.
+                </p>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-gray-900 text-base">Inscriptions</Label>
@@ -485,6 +592,7 @@ export default function SettingsPage() {
               </div>
               <Switch
                 checked={settings.allowRegistrations}
+                disabled={isLoadingGeneralSettings || isSavingGeneralSettings}
                 onCheckedChange={(checked) => setSettings({ ...settings, allowRegistrations: checked })}
               />
             </div>
@@ -509,6 +617,7 @@ export default function SettingsPage() {
               </div>
               <Switch
                 checked={settings.publicAccess}
+                disabled={isLoadingGeneralSettings || isSavingGeneralSettings}
                 onCheckedChange={(checked) => setSettings({ ...settings, publicAccess: checked })}
               />
             </div>
@@ -533,53 +642,59 @@ export default function SettingsPage() {
               </div>
               <Switch
                 checked={settings.emailNotifications}
+                disabled={isLoadingGeneralSettings || isSavingGeneralSettings}
                 onCheckedChange={(checked) => setSettings({ ...settings, emailNotifications: checked })}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Reset vues utilisateurs Découverte */}
+        {/* Email test (relais Gmail API) */}
         <Card className="bg-white border-gray-200 shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-500/10">
-                <RotateCcw className="h-5 w-5 text-red-600" />
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Send className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-gray-900">Réinitialiser les vues (plan Découverte)</CardTitle>
+                <CardTitle className="text-gray-900">Test du relais email</CardTitle>
                 <CardDescription className="text-gray-600">
-                  Remet à zéro le compteur de consultations de campagnes de tous les utilisateurs en plan gratuit.
+                  Envoie un email de test via le relais Gmail API configuré.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
-              <p className="text-sm text-amber-800">
-                <strong>Attention :</strong> cette action est irréversible. Elle remet à zéro{" "}
-                <code className="rounded bg-amber-100 px-1">daily_click_count</code> et{" "}
-                <code className="rounded bg-amber-100 px-1">monthly_campaigns_explored</code> pour
-                tous les utilisateurs Découverte.
+          <CardContent className="space-y-4 max-w-lg">
+            <div>
+              <Label htmlFor="testEmailTo" className="text-gray-900">Destinataire</Label>
+              <p className="text-xs text-gray-500 mb-1.5">
+                L'adresse qui recevra l'email de test.
               </p>
+              <Input
+                id="testEmailTo"
+                type="email"
+                value={testEmailTo}
+                onChange={(e) => setTestEmailTo(e.target.value)}
+                placeholder="vous@example.com"
+              />
             </div>
-            {resetResult && (
-              <p className="text-sm text-green-700 font-medium">✓ {resetResult}</p>
+            {testEmailResult && (
+              <p className="text-sm text-green-700 font-medium">✓ {testEmailResult}</p>
             )}
             <Button
-              variant="destructive"
-              onClick={handleResetFreeViews}
-              disabled={isResettingViews}
+              onClick={handleSendTestEmail}
+              disabled={isSendingTestEmail || !testEmailTo}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {isResettingViews ? (
+              {isSendingTestEmail ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Réinitialisation...
+                  Envoi...
                 </>
               ) : (
                 <>
-                  <Users className="h-4 w-4 mr-2" />
-                  Réinitialiser les vues Découverte
+                  <Send className="h-4 w-4 mr-2" />
+                  Envoyer un email test
                 </>
               )}
             </Button>
@@ -588,9 +703,22 @@ export default function SettingsPage() {
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <Button onClick={handleSave} className="bg-[#FF6B35] hover:bg-[#e55a2b] text-white">
-            <Save className="h-4 w-4 mr-2" />
-            Enregistrer les paramètres
+          <Button
+            onClick={handleSaveGeneralSettings}
+            disabled={isLoadingGeneralSettings || isSavingGeneralSettings}
+            className="bg-[#FF6B35] hover:bg-[#e55a2b] text-white"
+          >
+            {isSavingGeneralSettings ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Enregistrer les paramètres
+              </>
+            )}
           </Button>
         </div>
       </div>

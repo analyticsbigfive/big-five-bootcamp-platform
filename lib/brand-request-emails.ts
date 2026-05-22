@@ -1,17 +1,13 @@
 /**
- * Templates et helpers d'envoi pour les emails liés au workflow
- * "Suivi de marques" (brand_requests).
- *
- * Tous les emails utilisent Resend. Si RESEND_API_KEY est absent ou si
- * l'utilisateur a opté hors-emails (`email_unsubscribed`), l'envoi est
- * silencieusement ignoré.
+ * Templates et helpers d'envoi pour le workflow "Suivi de marques".
+ * Envoi via Gmail API (service account + DWD).
  */
 
-import { Resend } from 'resend'
+import { sendMail } from './gmail-sender'
 import { getSupabaseAdmin } from './supabase-server'
 
 const DEFAULT_FROM_EMAIL =
-  process.env.CONTACT_FROM_EMAIL || 'Laveiye <onboarding@resend.dev>'
+  process.env.GMAIL_FROM || process.env.CONTACT_FROM_EMAIL || 'Laveiye <support@laveiye.com>'
 
 export type BrandEmailKind =
   | 'submission_received'
@@ -265,8 +261,8 @@ function build({ userName, brandName, ctaUrl, context }: TemplateInput, kind: Br
  * Non bloquant côté appelant : les erreurs sont loggées.
  */
 export async function sendBrandRequestEmail(args: SendArgs): Promise<void> {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn(`[brand-emails] RESEND_API_KEY absent, skip ${args.kind}`)
+  if (!process.env.GMAIL_PRIVATE_KEY) {
+    console.warn(`[brand-emails] GMAIL_PRIVATE_KEY absent, skip ${args.kind}`)
     return
   }
 
@@ -293,17 +289,15 @@ export async function sendBrandRequestEmail(args: SendArgs): Promise<void> {
     args.kind,
   )
 
-  try {
-    const resend = new Resend(process.env.RESEND_API_KEY)
-    const from = await getFromEmail()
-    await resend.emails.send({
-      from,
-      to: email,
-      subject: tpl.subject,
-      html: tpl.html,
-    })
-  } catch (e) {
-    console.error(`[brand-emails] send ${args.kind} failed:`, e)
+  const from = await getFromEmail()
+  const result = await sendMail({
+    from,
+    to: email,
+    subject: tpl.subject,
+    html: tpl.html,
+  })
+  if (!result.ok) {
+    console.error(`[brand-emails] send ${args.kind} failed:`, result.error)
   }
 }
 
