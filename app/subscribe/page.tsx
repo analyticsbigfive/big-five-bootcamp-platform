@@ -21,6 +21,7 @@ import { getOperatorLogo } from "@/lib/operator-logos"
 import {
   PAWAPAY_COUNTRIES,
   PAWAPAY_PROVIDERS,
+  detectProviderFromPhone,
   type PawaPayCountryCode,
 } from "@/lib/pawapay-providers"
 
@@ -173,6 +174,8 @@ export default function SubscribePage() {
   const handlePhoneChange = (raw: string) => {
     const digits = raw.replace(/\D/g, '').slice(0, maxLocalDigits)
     setPhoneNumber(formatPhoneMask(digits, countryConfig.mask))
+    const detected = detectProviderFromPhone(digits, country)
+    if (detected) setProvider(detected)
   }
 
   useEffect(() => {

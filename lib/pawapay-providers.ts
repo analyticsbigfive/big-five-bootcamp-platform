@@ -1,8 +1,9 @@
 /**
  * Liste centralisée des opérateurs Mobile Money supportés via PawaPay.
  *
- * ⚠️ Wave **n'est pas pris en charge** par PawaPay. Pour Wave, utilisez
- * la passerelle PayTech (cf. `lib/paytech.ts`).
+ * ⚠️ Wave est volontairement traité hors de cette liste dans le parcours
+ * produit actuel. Si vous activez WAVE_CIV/WAVE_SEN côté PawaPay, ajoutez-les
+ * ici et vérifiez le flow REDIRECT_AUTH.
  *
  * Source : configuration officielle PawaPay (https://docs.pawapay.io)
  * + matrice opérateurs / pays / devises fournie par la direction produit.
@@ -57,9 +58,9 @@ export interface PawaPayProvider {
 /**
  * Liste effective des providers PawaPay activés.
  *
- * Wave est **volontairement exclu** : PawaPay ne supporte pas Wave Money
- * (CI/Sénégal). Pour proposer Wave, utiliser PayTech (Sénégal) ou rediriger
- * vers le portail Wave Business.
+ * Wave est **volontairement exclu** du parcours produit courant. PawaPay
+ * expose désormais des providers Wave en REDIRECT_AUTH : ne les ajoutez ici
+ * que si ce flow est activé et testé.
  */
 export const PAWAPAY_PROVIDERS: PawaPayProvider[] = [
   // Côte d'Ivoire (XOF)
@@ -67,12 +68,11 @@ export const PAWAPAY_PROVIDERS: PawaPayProvider[] = [
   { value: 'ORANGE_CIV',   label: 'Orange Money — Côte d’Ivoire',     country: 'CIV', currency: 'XOF' },
   { value: 'MOOV_CIV',     label: 'Moov Money — Côte d’Ivoire',       country: 'CIV', currency: 'XOF' },
 
-  // Sénégal (XOF) — pas de Wave (non supporté par PawaPay)
+  // Sénégal (XOF) — Wave reste traité hors de cette liste.
   { value: 'ORANGE_SEN',   label: 'Orange Money — Sénégal',           country: 'SEN', currency: 'XOF' },
   { value: 'FREE_SEN',     label: 'Free Money — Sénégal',             country: 'SEN', currency: 'XOF' },
 
   // Burkina Faso (XOF)
-  { value: 'MTN_MOMO_BFA', label: 'MTN Mobile Money — Burkina Faso',  country: 'BFA', currency: 'XOF' },
   { value: 'ORANGE_BFA',   label: 'Orange Money — Burkina Faso',      country: 'BFA', currency: 'XOF' },
   { value: 'MOOV_BFA',     label: 'Moov Money — Burkina Faso',        country: 'BFA', currency: 'XOF' },
 
@@ -98,4 +98,105 @@ export const PAWAPAY_PROVIDERS: PawaPayProvider[] = [
 /** Retourne les providers disponibles pour un pays donné. */
 export function getProvidersForCountry(country: PawaPayCountryCode): PawaPayProvider[] {
   return PAWAPAY_PROVIDERS.filter((p) => p.country === country)
+}
+
+/**
+ * Map préfixes locaux → code provider PawaPay.
+ *
+ * Ces préfixes reflètent l'attribution d'origine des plans nationaux
+ * (ARCEP/ARTP/ARTCI/ART/UIT). Avec la portabilité des numéros, ils restent
+ * une aide de pré-sélection et ne remplacent pas une vérification opérateur.
+ */
+const PHONE_PREFIX_MAP: Record<PawaPayCountryCode, Array<[string, string]>> = {
+  CIV: [
+    ['01', 'MOOV_CIV'],
+    ['05', 'MTN_MOMO_CIV'],
+    ['07', 'ORANGE_CIV'],
+  ],
+  SEN: [
+    ['77', 'ORANGE_SEN'], ['78', 'ORANGE_SEN'],
+    ['76', 'FREE_SEN'],
+  ],
+  BFA: [
+    ['01', 'MOOV_BFA'], ['02', 'MOOV_BFA'], ['03', 'MOOV_BFA'],
+    ['50', 'MOOV_BFA'], ['51', 'MOOV_BFA'], ['52', 'MOOV_BFA'],
+    ['60', 'MOOV_BFA'], ['61', 'MOOV_BFA'], ['62', 'MOOV_BFA'], ['63', 'MOOV_BFA'],
+    ['70', 'MOOV_BFA'], ['71', 'MOOV_BFA'], ['72', 'MOOV_BFA'], ['73', 'MOOV_BFA'],
+    ['05', 'ORANGE_BFA'], ['06', 'ORANGE_BFA'], ['07', 'ORANGE_BFA'],
+    ['54', 'ORANGE_BFA'], ['55', 'ORANGE_BFA'], ['56', 'ORANGE_BFA'], ['57', 'ORANGE_BFA'],
+    ['64', 'ORANGE_BFA'], ['65', 'ORANGE_BFA'], ['66', 'ORANGE_BFA'], ['67', 'ORANGE_BFA'],
+    ['74', 'ORANGE_BFA'], ['75', 'ORANGE_BFA'], ['76', 'ORANGE_BFA'], ['77', 'ORANGE_BFA'],
+  ],
+  BEN: [
+    ['42', 'MTN_MOMO_BEN'], ['46', 'MTN_MOMO_BEN'],
+    ['50', 'MTN_MOMO_BEN'], ['51', 'MTN_MOMO_BEN'], ['52', 'MTN_MOMO_BEN'], ['53', 'MTN_MOMO_BEN'], ['54', 'MTN_MOMO_BEN'],
+    ['56', 'MTN_MOMO_BEN'], ['57', 'MTN_MOMO_BEN'], ['59', 'MTN_MOMO_BEN'],
+    ['61', 'MTN_MOMO_BEN'], ['62', 'MTN_MOMO_BEN'],
+    ['66', 'MTN_MOMO_BEN'], ['67', 'MTN_MOMO_BEN'], ['69', 'MTN_MOMO_BEN'],
+    ['90', 'MTN_MOMO_BEN'], ['91', 'MTN_MOMO_BEN'], ['96', 'MTN_MOMO_BEN'], ['97', 'MTN_MOMO_BEN'],
+    ['45', 'MOOV_BEN'], ['55', 'MOOV_BEN'], ['58', 'MOOV_BEN'],
+    ['60', 'MOOV_BEN'], ['63', 'MOOV_BEN'], ['64', 'MOOV_BEN'], ['65', 'MOOV_BEN'], ['68', 'MOOV_BEN'],
+    ['94', 'MOOV_BEN'], ['95', 'MOOV_BEN'], ['98', 'MOOV_BEN'], ['99', 'MOOV_BEN'],
+  ],
+  MLI: [
+    ['70', 'ORANGE_MLI'], ['71', 'ORANGE_MLI'], ['72', 'ORANGE_MLI'], ['73', 'ORANGE_MLI'], ['74', 'ORANGE_MLI'],
+    ['75', 'ORANGE_MLI'], ['76', 'ORANGE_MLI'], ['77', 'ORANGE_MLI'], ['78', 'ORANGE_MLI'], ['79', 'ORANGE_MLI'],
+    ['60', 'MOOV_MLI'], ['61', 'MOOV_MLI'], ['62', 'MOOV_MLI'], ['63', 'MOOV_MLI'], ['64', 'MOOV_MLI'],
+    ['65', 'MOOV_MLI'], ['66', 'MOOV_MLI'], ['67', 'MOOV_MLI'], ['68', 'MOOV_MLI'], ['69', 'MOOV_MLI'],
+  ],
+  TGO: [
+    ['797', 'MOOV_TGO'], ['798', 'MOOV_TGO'], ['799', 'MOOV_TGO'],
+    ['96', 'MOOV_TGO'], ['97', 'MOOV_TGO'], ['98', 'MOOV_TGO'], ['99', 'MOOV_TGO'],
+  ],
+  CMR: [
+    ['650', 'MTN_MOMO_CMR'], ['651', 'MTN_MOMO_CMR'], ['652', 'MTN_MOMO_CMR'],
+    ['653', 'MTN_MOMO_CMR'], ['654', 'MTN_MOMO_CMR'],
+    ['670', 'MTN_MOMO_CMR'], ['671', 'MTN_MOMO_CMR'], ['672', 'MTN_MOMO_CMR'],
+    ['673', 'MTN_MOMO_CMR'], ['674', 'MTN_MOMO_CMR'], ['675', 'MTN_MOMO_CMR'],
+    ['676', 'MTN_MOMO_CMR'], ['677', 'MTN_MOMO_CMR'], ['678', 'MTN_MOMO_CMR'], ['679', 'MTN_MOMO_CMR'],
+    ['680', 'MTN_MOMO_CMR'], ['681', 'MTN_MOMO_CMR'], ['682', 'MTN_MOMO_CMR'], ['683', 'MTN_MOMO_CMR'],
+    ['655', 'ORANGE_CMR'], ['656', 'ORANGE_CMR'], ['657', 'ORANGE_CMR'],
+    ['658', 'ORANGE_CMR'], ['659', 'ORANGE_CMR'],
+    ['686', 'ORANGE_CMR'], ['687', 'ORANGE_CMR'], ['688', 'ORANGE_CMR'],
+    ['690', 'ORANGE_CMR'], ['691', 'ORANGE_CMR'], ['692', 'ORANGE_CMR'],
+    ['693', 'ORANGE_CMR'], ['694', 'ORANGE_CMR'], ['695', 'ORANGE_CMR'],
+    ['696', 'ORANGE_CMR'], ['697', 'ORANGE_CMR'], ['698', 'ORANGE_CMR'], ['699', 'ORANGE_CMR'],
+  ],
+  NER: [
+    ['74', 'MOOV_NER'], ['84', 'MOOV_NER'], ['85', 'MOOV_NER'],
+    ['94', 'MOOV_NER'], ['95', 'MOOV_NER'],
+  ],
+}
+
+function normalizeDigitsForPrefixLookup(
+  digits: string,
+  country: PawaPayCountryCode
+): string {
+  // Depuis le 30/11/2024, le Bénin ajoute "01" devant les anciens numéros.
+  return country === 'BEN' && digits.startsWith('01') ? digits.slice(2) : digits
+}
+
+/**
+ * Détecte le provider PawaPay depuis les premiers chiffres du numéro local.
+ *
+ * @param localDigits  Numéro local (sans indicatif pays), chiffres uniquement.
+ * @param country      Code pays PawaPay.
+ * @returns            Code provider (ex. "MTN_MOMO_CIV") ou null si inconnu.
+ */
+export function detectProviderFromPhone(
+  localDigits: string,
+  country: PawaPayCountryCode
+): string | null {
+  const digits = localDigits.replace(/\D/g, '')
+  if (digits.length < 2) return null
+
+  const lookupDigits = normalizeDigitsForPrefixLookup(digits, country)
+  const entries = PHONE_PREFIX_MAP[country] ?? []
+
+  const match = entries
+    .slice()
+    .sort(([a], [b]) => b.length - a.length)
+    .find(([prefix]) => lookupDigits.startsWith(prefix))
+
+  return match?.[1] ?? null
 }
