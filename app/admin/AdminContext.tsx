@@ -59,9 +59,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         }
 
         if (user?.email) {
-          // D'abord vérifier les métadonnées de l'utilisateur auth
-          const userMetadata = user.user_metadata;
-          if (userMetadata?.role === 'admin') {
+          // Vérifier app_metadata (rôle sécurisé, non modifiable par l'utilisateur).
+          // NE PAS lire user_metadata ici : il est modifiable côté client via
+          // supabase.auth.updateUser({ data }) et n'est pas une source de confiance.
+          const appMetadata = user.app_metadata;
+          if (appMetadata?.role === 'admin') {
             setUserRole('admin');
             setAuthLoading(false);
             return;
@@ -131,9 +133,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         knownUserIdRef.current = null;
       }
       if (session?.user?.email) {
-        // Vérifier d'abord les métadonnées
-        const userMetadata = session.user.user_metadata;
-        if (userMetadata?.role === 'admin') {
+        // Vérifier app_metadata (rôle sécurisé, non modifiable par l'utilisateur).
+        const appMetadata = session.user.app_metadata;
+        if (appMetadata?.role === 'admin') {
           setUserRole('admin');
           setAuthLoading(false);
           return;

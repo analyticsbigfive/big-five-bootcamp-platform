@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
-    const isAdmin = user.user_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+    const isAdmin = user.app_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase());
     if (!isAdmin) {
       return NextResponse.json({ error: 'Accès réservé aux administrateurs' }, { status: 403 });
     }
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       if (!user) {
         return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
       }
-      const isAdmin = user.user_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+      const isAdmin = user.app_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase());
       if (!isAdmin) {
         return NextResponse.json({ error: 'Accès réservé aux administrateurs' }, { status: 403 });
       }

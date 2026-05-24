@@ -17,7 +17,7 @@ async function ensureAdmin() {
   const supabase = await getSupabaseServer()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
-  return user.user_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase())
+  return user.app_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase())
 }
 
 function esc(input: string | null | undefined): string {

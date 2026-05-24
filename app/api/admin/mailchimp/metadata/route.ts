@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     const { ADMIN_EMAILS } = await import('@/lib/admin-auth')
-    const isAdmin = user.user_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase())
+    const isAdmin = user.app_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase())
 
     if (!isAdmin) {
       return NextResponse.json({ error: 'Accès réservé aux administrateurs' }, { status: 403 })
