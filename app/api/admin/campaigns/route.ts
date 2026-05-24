@@ -77,7 +77,7 @@ async function isAdminUser(request: NextRequest): Promise<{ isAdmin: boolean; em
       return { isAdmin: false, error: 'No user session' }
     }
 
-    if (user.user_metadata?.role === 'admin' || ADMIN_EMAILS.includes(user.email)) {
+    if (user.app_metadata?.role === 'admin' || ADMIN_EMAILS.includes(user.email.toLowerCase())) {
       return { isAdmin: true, email: user.email }
     }
 

@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import {
   isAllowedPawaPayIP,
+  checkDepositStatus,
   type PawaPayDepositCallback,
 } from '@/lib/pawapay'
 import {
@@ -84,23 +85,47 @@ export async function POST(request: NextRequest) {
       return new NextResponse('OK', { status: 200 })
     }
 
-    // 3. Mapping statut PawaPay → statut interne
-    const internalStatus = mapDepositStatus(payload.status)
+    // 3. SÉCURITÉ : les callbacks PawaPay ne sont pas signés. On ne fait
+    // JAMAIS confiance au statut présent dans le corps de la requête — un
+    // tiers qui atteindrait cet endpoint (ex. spoofing d'IP) pourrait sinon
+    // forger un "COMPLETED" et s'offrir un abonnement gratuit. On revérifie
+    // donc systématiquement le statut réel auprès de l'API PawaPay
+    // authentifiée (Bearer token) avant tout effet de bord.
+    let verified: PawaPayDepositCallback
+    try {
+      const result = await checkDepositStatus(payload.depositId)
+      if (result.status === 'NOT_FOUND' || !result.data) {
+        console.warn(
+          `⚠️ deposit ${payload.depositId} introuvable chez PawaPay — callback ignoré`
+        )
+        return new NextResponse('OK', { status: 200 })
+      }
+      verified = result.data
+    } catch (e) {
+      // Échec de la vérification (réseau / token) : on n'active rien sur la
+      // foi du body. Le polling /api/payment/check (qui vérifie aussi via
+      // l'API) prendra le relais côté client.
+      console.error('❌ Vérification PawaPay impossible, callback non appliqué:', e)
+      return new NextResponse('OK', { status: 200 })
+    }
+
+    // 4. Mapping statut réel (vérifié) → statut interne
+    const internalStatus = mapDepositStatus(verified.status)
 
     const { error: updateError } = await (supabaseAdmin as any)
       .from('payments')
       .update({
         status: internalStatus,
-        payment_method: payload.payer?.accountDetails?.provider || 'pawapay',
-        client_phone: payload.payer?.accountDetails?.phoneNumber || null,
-        final_amount: payload.amount ? Number(payload.amount) : undefined,
+        payment_method: verified.payer?.accountDetails?.provider || 'pawapay',
+        client_phone: verified.payer?.accountDetails?.phoneNumber || null,
+        final_amount: verified.amount ? Number(verified.amount) : undefined,
         completed_at:
           internalStatus === 'completed' ? new Date().toISOString() : undefined,
-        ipn_data: payload as any,
-        provider_transaction_id: payload.providerTransactionId || null,
-        failure_code: payload.failureReason?.failureCode || null,
-        failure_message: payload.failureReason?.failureMessage || null,
-        authorization_url: payload.authorizationUrl || null,
+        ipn_data: verified as any,
+        provider_transaction_id: verified.providerTransactionId || null,
+        failure_code: verified.failureReason?.failureCode || null,
+        failure_message: verified.failureReason?.failureMessage || null,
+        authorization_url: verified.authorizationUrl || null,
       })
       .eq('id', payment.id)
 
@@ -110,11 +135,11 @@ export async function POST(request: NextRequest) {
       return new NextResponse('OK', { status: 200 })
     }
 
-    // 4. Side-effects métier lorsque le paiement est complété
-    if (payload.status === 'COMPLETED') {
+    // 5. Side-effects métier lorsque le paiement est réellement complété
+    if (verified.status === 'COMPLETED') {
       const metadata = (payment.metadata || {}) as any
       if (metadata.type === 'brand_request') {
-        await activateBrandRequest(payment, payload)
+        await activateBrandRequest(payment, verified)
       } else {
         await activateUserSubscription(payment)
       }

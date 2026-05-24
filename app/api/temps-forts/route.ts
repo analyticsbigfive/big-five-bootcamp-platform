@@ -29,7 +29,7 @@ async function isAdmin(): Promise<boolean> {
     )
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return false
-    return user.user_metadata?.role === "admin" || ADMIN_EMAILS.includes(user.email || "")
+    return user.app_metadata?.role === "admin" || ADMIN_EMAILS.includes((user.email || "").toLowerCase())
   } catch {
     return false
   }

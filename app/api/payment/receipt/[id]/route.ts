@@ -3,6 +3,19 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+// Échappe les valeurs dynamiques avant de les injecter dans le HTML du reçu.
+// Le nom client provient du profil (modifiable par l'utilisateur) : sans
+// échappement, un name du type `<img onerror=...>` exécuterait du JS dans le
+// reçu rendu inline.
+function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 async function getAuthUser() {
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -108,7 +121,7 @@ export async function GET(
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Reçu de paiement - ${payment.ref_command}</title>
+  <title>Reçu de paiement - ${esc(payment.ref_command)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #0F0F0F; background: #f8f9fa; padding: 40px; }
@@ -138,7 +151,7 @@ export async function GET(
     <div class="header">
       <h1>Laveiye</h1>
       <p>Reçu de paiement</p>
-      <div class="badge">N° ${payment.ref_command}</div>
+      <div class="badge">N° ${esc(payment.ref_command)}</div>
     </div>
     <div class="body">
       <div class="status">
@@ -148,11 +161,11 @@ export async function GET(
       <div class="divider"></div>
       <div class="row">
         <span class="label">Client</span>
-        <span class="value">${userName}</span>
+        <span class="value">${esc(userName)}</span>
       </div>
       <div class="row">
         <span class="label">Email</span>
-        <span class="value">${userEmail}</span>
+        <span class="value">${esc(userEmail)}</span>
       </div>
       <div class="row">
         <span class="label">Date</span>
@@ -160,11 +173,11 @@ export async function GET(
       </div>
       <div class="row">
         <span class="label">Référence</span>
-        <span class="value">${payment.ref_command}</span>
+        <span class="value">${esc(payment.ref_command)}</span>
       </div>
       <div class="row">
         <span class="label">Méthode</span>
-        <span class="value">${payment.payment_method || "Mobile Money"}</span>
+        <span class="value">${esc(payment.payment_method || "Mobile Money")}</span>
       </div>
       <div class="row">
         <span class="label">Statut</span>
@@ -172,7 +185,7 @@ export async function GET(
       </div>
       <div class="row">
         <span class="label">Description</span>
-        <span class="value">${planDescription}</span>
+        <span class="value">${esc(planDescription)}</span>
       </div>
       ${validityDate ? `<div class="row">
         <span class="label">Valable jusqu'au</span>
@@ -180,7 +193,7 @@ export async function GET(
       </div>` : ''}
       ${promoBonusLine ? `<div class="row" style="background:#FFFBEC;border-radius:8px;padding:10px 12px;margin-top:4px;">
         <span class="label" style="color:#a17320;font-weight:700;">🎁 Bonus LAVEIYE</span>
-        <span class="value" style="color:#a17320;">${promoBonusLine}</span>
+        <span class="value" style="color:#a17320;">${esc(promoBonusLine)}</span>
       </div>` : ''}
       <div class="total">
         <div class="row">

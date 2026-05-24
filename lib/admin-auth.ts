@@ -1,9 +1,14 @@
 /**
  * Helper : verification admin uniforme pour les routes /api/admin/*
  * Accepte l'admin si l'une des conditions est remplie :
- *   - user_metadata.role === 'admin'
+ *   - app_metadata.role === 'admin'
  *   - email dans la liste ADMIN_EMAILS
  *   - row users.role === 'admin'
+ *
+ * IMPORTANT : on lit `app_metadata` (écrit uniquement via la service role
+ * key, cf. setUserRole) et JAMAIS `user_metadata`, que l'utilisateur peut
+ * modifier lui-même via `supabase.auth.updateUser({ data: ... })` — ce qui
+ * permettrait une élévation de privilèges.
  */
 
 import { getSupabaseServer, getSupabaseAdmin } from '@/lib/supabase-server'
@@ -40,8 +45,8 @@ export async function checkAdmin(): Promise<User | null> {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return null
 
-  // 1) metadata
-  if ((user.user_metadata as any)?.role === 'admin') return user
+  // 1) app_metadata (sécurisé : non modifiable par l'utilisateur)
+  if ((user.app_metadata as any)?.role === 'admin') return user
   // 2) liste blanche email (case-insensitive)
   if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) return user
 

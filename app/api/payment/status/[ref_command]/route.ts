@@ -33,7 +33,7 @@ export async function GET(
     if (error) {
       console.error('Payment lookup error:', error);
       return NextResponse.json(
-        { error: 'Payment not found', details: error.message },
+        { error: 'Payment not found' },
         { status: 404 }
       );
     }
@@ -45,7 +45,12 @@ export async function GET(
       );
     }
 
-    // Retourner les infos de paiement
+    // Cet endpoint n'est pas authentifié (la page de confirmation est ouverte
+    // après le retour depuis PawaPay). Le ref_command (UUIDv4) sert de jeton
+    // d'accès, mais on n'expose QUE les champs nécessaires à l'affichage —
+    // jamais client_phone ni la metadata complète (userId, customer_name,
+    // promo_code, subscription_end_date…), qui sont des données personnelles.
+    const meta = (payment.metadata || {}) as any;
     return NextResponse.json({
       success: true,
       payment: {
@@ -55,11 +60,14 @@ export async function GET(
         amount: payment.final_amount || payment.amount,
         currency: payment.currency || 'XOF',
         payment_method: payment.payment_method,
-        client_phone: payment.client_phone,
-        item_name: payment.item_name || payment.metadata?.item_name,
+        item_name: payment.item_name || meta.item_name,
         created_at: payment.created_at,
         completed_at: payment.completed_at,
-        metadata: payment.metadata,
+        metadata: {
+          item_name: meta.item_name ?? null,
+          plan_label: meta.plan_label ?? null,
+          promo_bonus: meta.promo_bonus ?? null,
+        },
         session: null, // Sessions non implémentées pour l'instant
       },
     });

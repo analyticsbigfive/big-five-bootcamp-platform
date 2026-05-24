@@ -29,7 +29,7 @@ export async function GET(
     }
 
     const isAdmin =
-      authUser.user_metadata?.role === 'admin' ||
+      authUser.app_metadata?.role === 'admin' ||
       ADMIN_EMAILS.includes((authUser.email || '').toLowerCase());
 
     if (authUser.id !== id && !isAdmin) {

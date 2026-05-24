@@ -16,7 +16,7 @@ async function ensureAdmin() {
   if (!user) {
     return { ok: false as const, response: NextResponse.json({ error: 'Non authentifié' }, { status: 401 }) }
   }
-  const isAdmin = user.user_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase())
+  const isAdmin = user.app_metadata?.role === 'admin' || ADMIN_EMAILS.includes((user.email || '').toLowerCase())
   if (!isAdmin) {
     return { ok: false as const, response: NextResponse.json({ error: 'Accès réservé aux administrateurs' }, { status: 403 }) }
   }
