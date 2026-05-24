@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { generateSlug, getGoogleDriveImageUrl } from "@/lib/utils"
+import { getViewerAccess, redactPremiumFields, redactPremiumFieldsList } from "@/lib/content-access"
 
 function getSupabaseAdmin() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -18,6 +19,9 @@ const CREATIVE_LIST_COLUMNS = 'id, title, slug, brand, category, status, thumbna
 
 // Colonnes complètes pour la vue détail
 const CREATIVE_DETAIL_COLUMNS = 'id, title, slug, summary, description, thumbnail, platforms, country, category, format, tags, created_at, video_url, images, brand, agency, year, axe, analyse, how_to_use, status, access_level, featured, publication_url, campaign_date, temps_fort_slugs'
+
+// Colonnes nécessaires au dashboard (liste enrichie côté connecté)
+const DASHBOARD_COLUMNS = 'id, title, summary, description, thumbnail, platforms, country, category, format, tags, created_at, video_url, images, brand, agency, year, axe, analyse, how_to_use, status, access_level, featured, publication_url, temps_fort_slugs'
 
 export async function getCreatives() {
     try {
@@ -63,9 +67,56 @@ export async function getCreativeByIdOrSlug(idOrSlug: string) {
             .single()
 
         if (error) throw error
-        return { success: true, data }
+
+        // Filtrage premium côté serveur : un compte gratuit (ou anonyme) ne doit
+        // jamais recevoir analyse/how_to_use d'une campagne premium dans le payload.
+        const viewer = await getViewerAccess()
+        return { success: true, data: redactPremiumFields(data, viewer) }
     } catch (error) {
         return { success: false, error: "Failed to fetch creative" }
+    }
+}
+
+// Récupère des campagnes par IDs (collections/favoris), avec filtrage premium
+// serveur. Remplace le `select('*')` client direct de la page favoris, qui
+// exposait analyse/how_to_use au JWT et casserait après le revoke colonne.
+export async function getCampaignsByIds(ids: string[]) {
+    try {
+        if (!ids || ids.length === 0) return { success: true, data: [] }
+        const supabase = getSupabaseAdmin()
+        const { data, error } = await supabase
+            .from('campaigns')
+            .select('*')
+            .in('id', ids)
+
+        if (error) throw error
+
+        const viewer = await getViewerAccess()
+        return { success: true, data: redactPremiumFieldsList(data || [], viewer) }
+    } catch (error) {
+        return { success: false, error: "Failed to fetch campaigns" }
+    }
+}
+
+// Liste des campagnes publiées pour le dashboard, avec filtrage premium serveur.
+// Remplace la requête Supabase directe côté client (qui exposait analyse/how_to_use
+// dans la réponse réseau à tout compte connecté, quel que soit son plan).
+export async function getDashboardCampaigns() {
+    try {
+        const supabase = getSupabaseAdmin()
+        const { data, error } = await supabase
+            .from('campaigns')
+            .select(DASHBOARD_COLUMNS)
+            .eq('status', 'Publié')
+            .order('created_at', { ascending: false })
+            .limit(500)
+
+        if (error) throw error
+
+        const viewer = await getViewerAccess()
+        return { success: true, data: redactPremiumFieldsList(data || [], viewer) }
+    } catch (error) {
+        return { success: false, error: "Failed to fetch dashboard campaigns" }
     }
 }
 

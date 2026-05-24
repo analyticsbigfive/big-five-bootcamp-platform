@@ -25,6 +25,7 @@ import {
 import { useAuthContext } from "@/components/auth-provider"
 import { useRequireActiveSubscription } from "@/hooks/use-require-active-subscription"
 import { createClient } from "@/lib/supabase"
+import { getCampaignsByIds } from "@/app/actions/creative"
 
 interface Collection {
   id: string
@@ -171,11 +172,10 @@ function FavoritesPageContent() {
     }
     setLoadingCollectionCampaigns(true)
     try {
-      const { data, error } = await supabase
-        .from('campaigns')
-        .select('*')
-        .in('id', campaignIds)
-      if (!error && data) {
+      // Server action (service_role + filtrage premium) : ne renvoie jamais
+      // analyse/how_to_use à un compte non-premium.
+      const { success, data } = await getCampaignsByIds(campaignIds)
+      if (success && data) {
         setCollectionCampaigns(data)
       } else {
         setCollectionCampaigns([])

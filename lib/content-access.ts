@@ -66,17 +66,20 @@ function pickCardFields<T extends Record<string, any>>(campaign: T): Partial<T> 
 }
 
 /**
- * Projette une campagne selon le niveau d'accès du visiteur.
- * - anonyme : champs carte uniquement.
- * - connecté non-premium : champs premium retirés si `access_level = premium`.
- * - premium / admin : objet complet.
+ * Retire les champs premium (`analyse`, `how_to_use`) d'une campagne
+ * `access_level = premium` quand le viewer n'a pas le droit premium.
+ *
+ * Ne réduit PAS aux champs carte : conserve tout le reste (description,
+ * vidéo, analyse du contenu gratuit...). À utiliser pour les vues complètes
+ * (page détail, dashboard) qui restent des teasers publics pour le contenu
+ * non-premium. Pour le contenu premium, c'est le seul filet côté serveur :
+ * les pages masquent l'affichage, mais la donnée ne doit jamais transiter.
  */
-export function projectCampaign<T extends Record<string, any>>(
+export function redactPremiumFields<T extends Record<string, any>>(
   campaign: T,
   viewer: ViewerAccess,
 ): Partial<T> {
   if (!campaign) return campaign
-  if (!viewer.isAuthenticated) return pickCardFields(campaign)
   if (viewer.canPremium) return campaign
 
   const isPremiumContent =
@@ -88,6 +91,28 @@ export function projectCampaign<T extends Record<string, any>>(
     if (field in sanitized) sanitized[field] = null
   }
   return sanitized as Partial<T>
+}
+
+export function redactPremiumFieldsList<T extends Record<string, any>>(
+  campaigns: T[],
+  viewer: ViewerAccess,
+): Partial<T>[] {
+  return (campaigns || []).map((c) => redactPremiumFields(c, viewer))
+}
+
+/**
+ * Projette une campagne selon le niveau d'accès du visiteur.
+ * - anonyme : champs carte uniquement.
+ * - connecté non-premium : champs premium retirés si `access_level = premium`.
+ * - premium / admin : objet complet.
+ */
+export function projectCampaign<T extends Record<string, any>>(
+  campaign: T,
+  viewer: ViewerAccess,
+): Partial<T> {
+  if (!campaign) return campaign
+  if (!viewer.isAuthenticated) return pickCardFields(campaign)
+  return redactPremiumFields(campaign, viewer)
 }
 
 export function projectCampaigns<T extends Record<string, any>>(

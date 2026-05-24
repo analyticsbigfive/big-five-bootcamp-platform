@@ -22,6 +22,8 @@ Journal des scripts SQL à appliquer dans Supabase SQL Editor.
 | 9 | `fix-subscription-audit.sql` | Audit + correctifs subscription | ☐ |
 | 10 | `pending-plan-downgrade.sql` | Colonnes `pending_plan*` pour downgrade différé | ☐ |
 | 11 | `add-is-beta-tester-to-users.sql` | Colonne `users.is_beta_tester` (cohortes / bêta-testeurs ajoutés en masse) | ☐ |
+| 12 | `migrations/20260524_campaigns_rls.sql` | RLS sur `campaigns` : lecture publiée uniquement, colonnes premium (analyse/how_to_use) masquées à `anon`. Ferme l'accès direct à l'API Supabase sans compte. | ☐ |
+| 13 | `migrations/20260524_campaigns_rls_authenticated.sql` | Backstop : retire `analyse`/`how_to_use` au rôle `authenticated`. **À appliquer APRÈS déploiement du code** (dashboard + détail passés en server actions). Ferme la lecture des champs premium par un compte connecté non-payant via son JWT. | ☐ |
 
 ## Scripts ponctuels (one-shot)
 

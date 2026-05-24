@@ -14,7 +14,7 @@ import { ContentGridSkeleton } from "@/components/dashboard/content-card-skeleto
 import { UpgradePopup, useUpgradePopup } from "@/components/upgrade-popup"
 import { useRequireActiveSubscription } from "@/hooks/use-require-active-subscription"
 import { BasicToProBanner } from "@/components/basic-to-pro-banner"
-import { createClient } from "@/lib/supabase"
+import { getDashboardCampaigns } from "@/app/actions/creative"
 import { useAuthContext } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Filter, Grid3X3, LayoutList, ChevronLeft, ChevronRight, CalendarDays, TrendingUp, ChevronRight as ArrowRight, Sparkles, Rss, CheckCircle2 } from "lucide-react"
@@ -403,8 +403,6 @@ export default function DashboardPage() {
     refreshClickCounters,
   } = useAuthContext()
 
-  const supabase = createClient()
-
   // Extraire les options de filtres dynamiquement depuis les campagnes
   const dynamicFilterOptions = useMemo<DynamicFilterOptions>(() => {
     const countries = new Set<string>()
@@ -461,21 +459,15 @@ export default function DashboardPage() {
     return Array.from(set).filter(Boolean).sort((a, b) => a.localeCompare(b, 'fr'))
   }, [campaigns])
 
-  // Charger les campagnes publiees depuis Supabase
+  // Charger les campagnes publiees via server action (filtrage premium côté serveur :
+  // les champs analyse/how_to_use ne sont jamais envoyés à un compte non-premium).
   useEffect(() => {
     const loadCampaigns = async () => {
       try {
-        const { data, error } = await supabase
-          .from('campaigns')
-          .select(
-            'id, title, summary, description, thumbnail, platforms, country, category, format, tags, created_at, video_url, images, brand, agency, year, axe, analyse, how_to_use, status, access_level, featured, publication_url, temps_fort_slugs'
-          )
-          .eq('status', 'Publié')
-          .order('created_at', { ascending: false })
-          .limit(500)
+        const { success, data, error } = await getDashboardCampaigns()
 
-        if (error) {
-          console.warn('Table campaigns non disponible:', error.message)
+        if (!success) {
+          console.warn('Chargement campagnes échoué:', error)
           setCampaigns(getSampleCampaigns())
           return
         }
