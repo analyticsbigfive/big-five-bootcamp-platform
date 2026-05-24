@@ -20,6 +20,7 @@ import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { CHARIOW_CONFIG, generateRefCommand, getSale } from '@/lib/chariow';
 import { PLAN_BASIC, PLAN_PRO } from '@/lib/pricing';
+import { computeSubscriptionEnd } from '@/lib/subscription';
 
 export async function POST(request: NextRequest) {
   try {
@@ -147,14 +148,15 @@ export async function POST(request: NextRequest) {
     let subscriptionEndDate: Date;
 
     if (isRenewal) {
-      // Renouvellement : ajouter 30 jours à la date de fin existante
-      subscriptionEndDate = new Date(
-        new Date(user.subscription_end_date).getTime() + 30 * 24 * 60 * 60 * 1000
+      // Renouvellement : +1 mois calendaire à partir de la date de fin existante
+      subscriptionEndDate = computeSubscriptionEnd(
+        new Date(user.subscription_end_date),
+        { billing: 'monthly' }
       );
       console.log('🔄 Renewal: extending to', subscriptionEndDate.toISOString());
     } else {
-      // Nouvel abonnement : 30 jours à partir de maintenant
-      subscriptionEndDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      // Nouvel abonnement : +1 mois calendaire à partir de maintenant
+      subscriptionEndDate = computeSubscriptionEnd(now, { billing: 'monthly' });
       console.log('🆕 New subscription until', subscriptionEndDate.toISOString());
     }
 

@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { addDays, computeSubscriptionEnd } from '@/lib/subscription';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,8 +50,13 @@ export async function GET(request: NextRequest) {
       const results = await Promise.all(
         (pendingUsers || []).map(async (u: any) => {
           const startsAt = new Date(u.pending_plan_starts_at);
-          const durationDays = u.pending_duration_days || 30;
-          const newEnd = new Date(startsAt.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+          // Durée explicite (bonus promo) prioritaire ; sinon période calendaire
+          // selon le billing (downgrade différé d'un plan mensuel/annuel).
+          const newEnd = (
+            u.pending_duration_days != null
+              ? addDays(startsAt, u.pending_duration_days)
+              : computeSubscriptionEnd(startsAt, { billing: u.pending_billing })
+          ).toISOString();
 
           const { error: applyErr } = await (supabaseAdmin as any)
             .from('users')

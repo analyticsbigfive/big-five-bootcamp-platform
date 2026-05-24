@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkDepositStatus } from '@/lib/pawapay';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { computeSubscriptionEnd } from '@/lib/subscription';
 
 let _supabase: ReturnType<typeof createClient> | null = null;
 function getSupabase() {
@@ -148,7 +149,7 @@ export async function POST(
       if (paymentData.metadata?.type === 'subscription' && paymentData.metadata?.userId) {
         const subscriptionEndDate = paymentData.metadata.subscription_end_date
           ? new Date(paymentData.metadata.subscription_end_date)
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          : computeSubscriptionEnd(new Date(), { billing: paymentData.metadata.billing });
 
         // Plan strict — pas de fallback silencieux vers Pro.
         // Le plan doit etre present dans metadata (genere par /api/payment/subscribe).
@@ -229,7 +230,9 @@ export async function POST(
               pending_plan: planName,
               pending_plan_starts_at: paymentData.metadata.pending_starts_at,
               pending_billing: paymentData.metadata.billing || null,
-              pending_duration_days: paymentData.metadata.duration_days || null,
+              // null → le cron applique une période calendaire selon le billing
+              // (un downgrade standard n'a pas de durée promo explicite).
+              pending_duration_days: null,
               updated_at: new Date().toISOString(),
             } as any)
             .eq('id', paymentData.metadata.userId);

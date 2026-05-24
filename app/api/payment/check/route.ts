@@ -9,8 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { ADMIN_EMAILS } from '@/lib/admin-auth';
-
-const SUBSCRIPTION_DURATION_DAYS = 30;
+import { computeSubscriptionEnd } from '@/lib/subscription';
 
 /**
  * Active l'abonnement pour l'utilisateur associé à un paiement.
@@ -42,7 +41,10 @@ async function activatePremiumForPayment(payment: any, explicitOverride?: string
   }
 
   const now = new Date();
-  const endDate = new Date(now.getTime() + SUBSCRIPTION_DURATION_DAYS * 24 * 60 * 60 * 1000);
+  // Privilégier la date calculée à la souscription ; sinon période calendaire.
+  const endDate = payment.metadata?.subscription_end_date
+    ? new Date(payment.metadata.subscription_end_date)
+    : computeSubscriptionEnd(now, { billing: payment.metadata?.billing });
 
   try {
     let query = (supabaseAdmin as any).from('users').update({

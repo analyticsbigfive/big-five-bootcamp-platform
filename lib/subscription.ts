@@ -17,6 +17,54 @@
 
 import { toPlanSlug, type PlanSlug } from './pricing'
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** Ajoute un nombre exact de jours (utilisé pour les durées promo explicites). */
+export function addDays(from: Date, days: number): Date {
+  return new Date(from.getTime() + days * DAY_MS)
+}
+
+/**
+ * Ajoute `months` mois calendaires à `from`, en respectant la longueur réelle
+ * de chaque mois (28/29/30/31 jours) et les années bissextiles. Si le jour de
+ * départ n'existe pas dans le mois cible (ex. 31 janvier + 1 mois → février),
+ * on retombe sur le dernier jour du mois cible (comportement de facturation
+ * standard).
+ */
+export function addCalendarMonths(from: Date, months: number): Date {
+  const result = new Date(from)
+  const day = result.getDate()
+  result.setDate(1) // éviter le débordement de mois avant de fixer le mois
+  result.setMonth(result.getMonth() + months)
+  const lastDayOfTargetMonth = new Date(
+    result.getFullYear(),
+    result.getMonth() + 1,
+    0,
+  ).getDate()
+  result.setDate(Math.min(day, lastDayOfTargetMonth))
+  return result
+}
+
+export function normalizeBilling(billing?: string | null): 'monthly' | 'annual' {
+  return String(billing || '').toLowerCase() === 'annual' ? 'annual' : 'monthly'
+}
+
+/**
+ * Date de fin d'une période d'abonnement, calculée en calendaire :
+ *   - mensuel → +1 mois (longueur réelle du mois)
+ *   - annuel  → +12 mois (gère les bissextiles)
+ *
+ * Pour une durée promotionnelle explicite (ex. bonus de 90 jours), passer
+ * `days` : il est prioritaire et ajoute exactement ce nombre de jours.
+ */
+export function computeSubscriptionEnd(
+  from: Date,
+  opts: { billing?: string | null; days?: number | null },
+): Date {
+  if (opts.days != null) return addDays(from, opts.days)
+  return addCalendarMonths(from, normalizeBilling(opts.billing) === 'annual' ? 12 : 1)
+}
+
 export interface RawUserSubscription {
   plan?: string | null
   subscription_status?: string | null
@@ -65,8 +113,12 @@ export function getEffectiveSubscription(
 
   // Cas 1 : pending arrive à échéance. On bascule virtuellement.
   if (pendingPlan !== 'locked' && pendingStartsAt && pendingStartsAt <= now) {
-    const duration = user.pending_duration_days || 30
-    const newEnd = new Date(pendingStartsAt.getTime() + duration * 24 * 60 * 60 * 1000)
+    // Durée explicite (bonus promo) prioritaire ; sinon période calendaire
+    // selon le billing (downgrade différé d'un plan mensuel/annuel).
+    const newEnd =
+      user.pending_duration_days != null
+        ? addDays(pendingStartsAt, user.pending_duration_days)
+        : computeSubscriptionEnd(pendingStartsAt, { billing: user.pending_billing })
     const isStillActive = newEnd > now
     return {
       plan: isStillActive ? pendingPlan : 'locked',

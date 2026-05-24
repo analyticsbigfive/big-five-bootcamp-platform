@@ -20,6 +20,7 @@ import {
   checkDepositStatus,
   type PawaPayDepositCallback,
 } from '@/lib/pawapay'
+import { computeSubscriptionEnd } from '@/lib/subscription'
 import {
   notifyPaymentSuccess,
   notifyPromoCodeRedeemed,
@@ -340,7 +341,7 @@ async function activateUserSubscription(payment: {
     // ——————————————————————————————————————————————————————————————
     const end =
       metadata.subscription_end_date ||
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      computeSubscriptionEnd(new Date(), { billing: metadata.billing }).toISOString()
 
     // Downgrade différé : on stocke en `pending_plan` au lieu d'écraser
     // le plan courant. Le cron `apply-pending-plans` basculera à expiration.
@@ -358,7 +359,9 @@ async function activateUserSubscription(payment: {
           pending_plan: planName,
           pending_plan_starts_at: metadata.pending_starts_at,
           pending_billing: metadata.billing || null,
-          pending_duration_days: metadata.duration_days || null,
+          // null → le cron applique une période calendaire selon le billing
+          // (un downgrade standard n'a pas de durée promo explicite).
+          pending_duration_days: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', metadata.userId)

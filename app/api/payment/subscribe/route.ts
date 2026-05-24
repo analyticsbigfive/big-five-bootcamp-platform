@@ -33,6 +33,7 @@ import {
   type PromoPhases,
 } from '@/lib/promo-codes';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { addDays, computeSubscriptionEnd } from '@/lib/subscription';
 
 const PLAN_PRICES: Record<string, { price: number; annualPrice: number; label: string; dbKey: string }> = {
   discovery: { price: 1000, annualPrice: 10000, label: 'Découverte', dbKey: 'Discovery' },
@@ -333,8 +334,11 @@ export async function POST(request: NextRequest) {
     const baseDate = isDowngrade
       ? pendingStartsAt!
       : (isCurrentlyActive ? currentEndDate : now);
-    const subscriptionEndDate = new Date(baseDate!);
-    subscriptionEndDate.setDate(subscriptionEndDate.getDate() + durationDays);
+    // Calendaire pour un abonnement standard (mensuel = longueur réelle du mois,
+    // annuel = 1 an) ; durée explicite en jours pour les phases promo.
+    const subscriptionEndDate = promoApplied
+      ? addDays(baseDate!, durationDays)
+      : computeSubscriptionEnd(baseDate!, { billing: isAnnual ? 'annual' : 'monthly' });
 
     const ref_command = generateRefCommand('SUB');
     const customerName = userName || (existingUser as any).name || userEmail.split('@')[0];
