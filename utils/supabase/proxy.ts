@@ -28,6 +28,17 @@ export async function updateSession(request: NextRequest) {
         })
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    // Si la config Supabase n'est pas disponible (mauvaise config env en prod),
+    // ne pas casser toute la navigation avec un 500 côté middleware.
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return NextResponse.next({
+            request: { headers: request.headers },
+        })
+    }
+
     let response = NextResponse.next({
         request: {
             headers: request.headers,
@@ -35,8 +46,8 @@ export async function updateSession(request: NextRequest) {
     })
 
     const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        supabaseUrl,
+        supabaseAnonKey,
         {
             cookies: {
                 getAll() {

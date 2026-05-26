@@ -5,6 +5,17 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET() {
   try {
+    const hasSupabaseEnv =
+      !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!hasSupabaseEnv) {
+      return NextResponse.json(
+        { users: 0, campaigns: 0, brands: 0, countries: 0 },
+        { headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } }
+      )
+    }
+
     const [
       { count: usersCount, error: usersError },
       { count: campaignsCount, error: campaignsError },

@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "build": "next build --webpack",
-    "build:cf": "opennextjs-cloudflare build",
-    "deploy:cf": "opennextjs-cloudflare deploy",
+    "build:cf": "node scripts/verify-build-env.mjs && opennextjs-cloudflare build",
+    "deploy:cf": "node scripts/verify-build-env.mjs && opennextjs-cloudflare deploy",
     "preview:cf": "opennextjs-cloudflare preview",
     "dev": "next dev",
     "lint": "eslint .",
