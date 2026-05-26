@@ -164,7 +164,7 @@ export async function resetSubscription(
                 : 'Basic'
         }
 
-        const { error } = await supabase
+        const { data: userRow, error: userErr } = await supabase
             .from('users')
             .update({
                 plan: resolvedPlan,
@@ -174,9 +174,29 @@ export async function resetSubscription(
                 updated_at: now.toISOString(),
             })
             .eq('id', userId)
+            .select('email')
+            .single<{ email: string | null }>()
 
-        if (error) throw error
+        if (userErr) throw userErr
+
+        // Audit ligne payments : trace activation manuelle (montant=0).
+        await (supabase as any)
+            .from('payments')
+            .insert({
+                ref_command: `manual-${userId}-${now.getTime()}`,
+                amount: 0,
+                currency: 'XOF',
+                status: 'completed',
+                payment_method: 'manual_admin',
+                user_email: userRow?.email || null,
+                item_name: `Activation manuelle ${resolvedPlan} (${days}j)`,
+                metadata: { type: 'manual_activation', userId, plan: resolvedPlan, days },
+                created_at: now.toISOString(),
+                completed_at: now.toISOString(),
+            })
+
         revalidatePath("/admin/users")
+        revalidatePath("/admin/payments")
         return { success: true }
     } catch (error) {
         console.error('Error resetting subscription:', error)

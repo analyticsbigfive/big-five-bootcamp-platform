@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-server'
 import { BalanceCards, type PaymentTotals } from './balance-cards'
 import { PaymentsTable, type PaymentRow, type PayoutRow } from './payments-table'
 import { LiveBalances } from './live-balances'
+import { LiveDeposits } from './live-deposits'
 import { MonthFilter } from './month-filter'
 
 export const dynamic = 'force-dynamic'
@@ -149,6 +150,8 @@ export default async function AdminPaymentsPage({
       </div>
 
       <LiveBalances />
+
+      <LiveDeposits />
 
       <div>
         <p className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-2">

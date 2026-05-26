@@ -345,6 +345,38 @@ export function checkDepositStatus(depositId: string) {
   )
 }
 
+export interface ListDepositsParams {
+  from?: string  // ISO 8601, ex. "2026-05-01T00:00:00Z"
+  to?: string    // ISO 8601
+  limit?: number // max 1000, defaut 100
+  offset?: number
+  status?: PawaPayStatus
+  depositId?: string
+  providerTransactionId?: string
+}
+
+/**
+ * Liste les deposits PawaPay. Source de verite live (l'API renvoie ce que
+ * PawaPay voit, indep. de notre table locale `payments`).
+ * Doc: GET /v2/deposits
+ */
+export function listDeposits(params: ListDepositsParams = {}) {
+  const qs = new URLSearchParams()
+  if (params.from) qs.set('from', params.from)
+  if (params.to) qs.set('to', params.to)
+  if (params.limit != null) qs.set('limit', String(params.limit))
+  if (params.offset != null) qs.set('offset', String(params.offset))
+  if (params.status) qs.set('status', params.status)
+  if (params.depositId) qs.set('depositId', params.depositId)
+  if (params.providerTransactionId)
+    qs.set('providerTransactionId', params.providerTransactionId)
+  const q = qs.toString()
+  return pawapayFetch<PawaPayDepositCallback[]>(
+    `/v2/deposits${q ? `?${q}` : ''}`,
+    { method: 'GET' }
+  )
+}
+
 export function checkPayoutStatus(payoutId: string) {
   return pawapayFetch<CheckStatusResponse<PawaPayPayoutCallback>>(
     `/v2/payouts/${payoutId}`,

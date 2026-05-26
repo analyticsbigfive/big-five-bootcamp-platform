@@ -117,6 +117,7 @@ export function UserRow({ user, payments, favoritesCount }: UserRowProps) {
     const [emailSubject, setEmailSubject] = useState("Nouveautés - Laveiye")
     const [emailMessage, setEmailMessage] = useState("")
     const [resetDays, setResetDays] = useState(30)
+    const [resetPlan, setResetPlan] = useState<'keep' | 'Discovery' | 'Basic' | 'Pro'>('keep')
 
     const subStart = user.subscription_start_date as string | null | undefined
     const subEnd = user.subscription_end_date as string | null | undefined
@@ -199,10 +200,12 @@ export function UserRow({ user, payments, favoritesCount }: UserRowProps) {
     }
 
     const handleResetSubscription = async () => {
-        if (!confirm(`Reinitialiser l'abonnement de ${user.name || user.email} a ${resetDays} jours ?`)) return
+        const planLabel = resetPlan === 'keep' ? '(plan actuel)' : resetPlan
+        if (!confirm(`Activer abonnement ${planLabel} pour ${user.name || user.email} pendant ${resetDays} jours ?`)) return
         setIsResettingSubscription(true)
         try {
-            const result = await resetSubscription(user.id as string, resetDays)
+            const planArg = resetPlan === 'keep' ? undefined : resetPlan
+            const result = await resetSubscription(user.id as string, resetDays, planArg)
             if (!result.success) {
                 alert('Erreur: ' + (result.error || 'Impossible de reinitialiser l\'abonnement'))
             }
@@ -392,6 +395,17 @@ export function UserRow({ user, payments, favoritesCount }: UserRowProps) {
 
                                 <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                     <select
+                                        value={resetPlan}
+                                        onChange={(e) => setResetPlan(e.target.value as typeof resetPlan)}
+                                        className="h-8 rounded-md border bg-background px-2 text-xs"
+                                        title="Plan a activer"
+                                    >
+                                        <option value="keep">Plan actuel</option>
+                                        <option value="Discovery">Discovery</option>
+                                        <option value="Basic">Basic</option>
+                                        <option value="Pro">Pro</option>
+                                    </select>
+                                    <select
                                         value={resetDays}
                                         onChange={(e) => setResetDays(Number(e.target.value))}
                                         className="h-8 rounded-md border bg-background px-2 text-xs"
@@ -401,6 +415,7 @@ export function UserRow({ user, payments, favoritesCount }: UserRowProps) {
                                         <option value={30}>30 jours</option>
                                         <option value={60}>60 jours</option>
                                         <option value={90}>90 jours</option>
+                                        <option value={365}>365 jours</option>
                                     </select>
                                     <Button
                                         variant="outline"
