@@ -6,6 +6,7 @@
  * Prérequis: Variables d'environnement configurées dans .env.local
  *   - NEXT_PUBLIC_SUPABASE_URL
  *   - SUPABASE_SERVICE_ROLE_KEY (clé service_role, PAS la clé anon)
+ *   - DEFAULT_ADMIN_PASSWORD
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -25,11 +26,13 @@ if (existsSync(envLocalPath)) {
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD
 
-if (!supabaseUrl || !serviceRoleKey) {
+if (!supabaseUrl || !serviceRoleKey || !defaultAdminPassword) {
   console.error('❌ Variables manquantes:')
   if (!supabaseUrl) console.error('   - NEXT_PUBLIC_SUPABASE_URL')
   if (!serviceRoleKey) console.error('   - SUPABASE_SERVICE_ROLE_KEY')
+  if (!defaultAdminPassword) console.error('   - DEFAULT_ADMIN_PASSWORD')
   console.error('\nAssurez-vous que ces variables sont dans votre fichier .env.local')
   process.exit(1)
 }
@@ -45,27 +48,27 @@ const ADMIN_USERS = [
   {
     email: 'jeanluc@bigfiveabidjan.com',
     name: 'Jean-Luc',
-    password: 'BigFive@Admin2024!',
+    password: defaultAdminPassword,
   },
   {
     email: 'cossi@bigfiveabidjan.com',
     name: 'Cossi',
-    password: 'BigFive@Admin2024!',
+    password: defaultAdminPassword,
   },
   {
     email: 'yannick@bigfiveabidjan.com',
     name: 'Yannick J',
-    password: 'BigFive@Admin2024!',
+    password: defaultAdminPassword,
   },
   {
     email: 'franck@bigfiveabidjan.com',
     name: 'Franck',
-    password: 'BigFive@Admin2024!',
+    password: defaultAdminPassword,
   },
   {
     email: 'stephanie@bigfiveabidjan.com',
     name: 'Stéphanie',
-    password: 'BigFive@Admin2024!',
+    password: defaultAdminPassword,
   },
 ]
 

@@ -4,13 +4,30 @@
  * Le script SQL ne fonctionne pas car les bytes U+FFFD ne sont pas matchés par chr(195).
  * Ce script lit les campagnes, applique fixBrokenEncoding en JS, et les réécrit.
  *
- * Usage: node scripts/fix-encoding-db.mjs
+ * Usage: node --env-file=.env.local scripts/fix-encoding-db.mjs
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { config } from 'dotenv'
+import { existsSync } from 'fs'
+import { resolve } from 'path'
 
-const SUPABASE_URL = 'https://jyycgendzegiazltvarx.supabase.co'
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5eWNnZW5kemVnaWF6bHR2YXJ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDYyODIxMiwiZXhwIjoyMDg2MjA0MjEyfQ.Ai4rDr-MFDyMca67F6Fn_-rgKQlymLYwwBnwGOqV0Ik'
+const envLocalPath = resolve(process.cwd(), '.env.local')
+const envPath = resolve(process.cwd(), '.env')
+
+if (existsSync(envLocalPath)) {
+  config({ path: envLocalPath })
+} else if (existsSync(envPath)) {
+  config({ path: envPath })
+}
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  console.error('Variables manquantes : NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY')
+  process.exit(1)
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 

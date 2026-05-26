@@ -136,20 +136,20 @@ export default function OpenGraphImage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", maxWidth: 760 }}>
-            <div
-              style={{
-                display: "flex",
-                alignSelf: "flex-start",
-                borderRadius: 999,
-                background: "rgba(242,179,61,0.22)",
-                color: "#704B08",
-                padding: "12px 20px",
-                fontSize: 24,
-                fontWeight: 800,
-                marginBottom: 24,
-              }}
-            >
-              Bibliotheque creative africaine
+            <div style={{ display: "flex", flexDirection: "row", marginBottom: 24 }}>
+              <div
+                style={{
+                  display: "flex",
+                  borderRadius: 999,
+                  background: "rgba(242,179,61,0.22)",
+                  color: "#704B08",
+                  padding: "12px 20px",
+                  fontSize: 24,
+                  fontWeight: 800,
+                }}
+              >
+                Bibliotheque creative africaine
+              </div>
             </div>
             <div style={{ fontSize: 72, fontWeight: 900, lineHeight: 1.04 }}>
               Observez, analysez et creez des campagnes plus fortes.

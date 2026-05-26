@@ -2,12 +2,15 @@ import pg from 'pg'
 import { config } from 'dotenv'
 config({ path: '.env.local' })
 
+const databaseUrl = process.env.DATABASE_URL
+
+if (!databaseUrl) {
+  console.error('DATABASE_URL manquante dans .env.local')
+  process.exit(1)
+}
+
 const client = new pg.Client({
-  host: 'aws-0-eu-central-1.pooler.supabase.com',
-  port: 6543,
-  database: 'postgres',
-  user: 'postgres.jyycgendzegiazltvarx',
-  password: 'fu.6uVa8%G-cStZ',
+  connectionString: databaseUrl,
   ssl: { rejectUnauthorized: false },
 })
 await client.connect()
