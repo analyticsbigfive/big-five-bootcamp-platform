@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og"
 
-export const runtime = "edge"
+
 export const alt = "Laveiye - Bibliotheque de campagnes marketing africaines"
 export const size = {
   width: 1200,
