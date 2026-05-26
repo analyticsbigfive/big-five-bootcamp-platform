@@ -49,6 +49,8 @@ scripts/delete-user.ts
 scripts/create-bulk-users.ts
 scripts/check-auth-logs.mjs
 scripts/diagnose-build-env.local.mjs
+# Note: scripts/verify-build-env.mjs is force-added (git add -f) and tracked
+# despite the scripts/ rule above, because Cloudflare Pages needs it at build time.
 
 # Local agent settings can contain copied shell commands and secrets
 .claude/settings.local.json
